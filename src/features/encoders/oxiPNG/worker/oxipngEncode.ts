@@ -25,20 +25,19 @@ async function initMT() {
 }
 
 async function initST() {
-  const { default: init, optimise } = await import(
-    'codecs/oxipng/pkg/squoosh_oxipng'
-  );
+  const { default: init, optimise } =
+    await import('codecs/oxipng/pkg/squoosh_oxipng');
   await init();
   return optimise;
 }
 
-let wasmReady: ReturnType<typeof initMT | typeof initST>;
+let wasmReady: ReturnType<typeof initMT | typeof initST> | undefined;
 
 export default async function encode(
   data: ImageData,
   options: EncodeOptions,
 ): Promise<ArrayBuffer> {
-  if (!wasmReady) {
+  if (wasmReady === undefined) {
     wasmReady = checkThreadsSupport().then((hasThreads: boolean) =>
       hasThreads ? initMT() : initST(),
     );
@@ -51,5 +50,5 @@ export default async function encode(
     data.height,
     options.level,
     options.interlace,
-  ).buffer;
+  ).buffer as ArrayBuffer;
 }

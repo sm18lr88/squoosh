@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "rotate",
   "scripts": {
     "build": "../build-rust.sh ./build.sh",

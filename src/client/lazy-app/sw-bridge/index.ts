@@ -7,7 +7,7 @@ import swUrl from 'service-worker:sw';
 /** Tell the service worker to skip waiting */
 async function skipWaiting() {
   const reg = await navigator.serviceWorker.getRegistration();
-  if (!reg || !reg.waiting) return;
+  if (!reg?.waiting) return;
   reg.waiting.postMessage('skip-waiting');
 }
 
@@ -73,7 +73,7 @@ export async function offliner(showSnack: SnackBarElement['showSnackbar']) {
     }
 
     // Otherwise reload (the user will have agreed to this).
-    location.reload();
+    globalThis.location.reload();
   });
 
   // If we don't have a controller, we don't need to check for updates – we've just loaded from the

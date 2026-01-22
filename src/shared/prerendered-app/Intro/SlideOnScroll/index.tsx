@@ -7,7 +7,7 @@ export default class SlideOnScroll extends Component<Props, State> {
   private observer?: IntersectionObserver;
 
   componentDidMount() {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const base = this.base as HTMLElement;
     let wasOutOfView = false;

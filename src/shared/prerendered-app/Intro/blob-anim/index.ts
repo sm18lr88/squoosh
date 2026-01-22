@@ -52,30 +52,6 @@ const sevenPointCircle: BlobPoint[] = [
   [-0.972, -0.386, -0.782, -0.623, -0.592, -0.861],
 ];
 
-/*
-// Should it be needed, here's how the above was created:
-function createBezierCirclePoints(points: number): BlobPoint[] {
-  const anglePerPoint = 360 / points;
-  const matrix = new DOMMatrix();
-  const point = new DOMPoint();
-  const controlDistance = (4 / 3) * Math.tan(Math.PI / (2 * points));
-  return Array.from({ length: points }, (_, i) => {
-    point.x = -controlDistance;
-    point.y = -1;
-    const cp1 = point.matrixTransform(matrix);
-    point.x = 0;
-    point.y = -1;
-    const p = point.matrixTransform(matrix);
-    point.x = controlDistance;
-    point.y = -1;
-    const cp2 = point.matrixTransform(matrix);
-    const basePoint: BlobPoint = [cp1.x, cp1.y, p.x, p.y, cp2.x, cp2.y];
-    matrix.rotateSelf(0, 0, anglePerPoint);
-    return basePoint;
-  });
-}
-*/
-
 interface CircleBlobOptions {
   minDuration?: number;
   maxDuration?: number;
@@ -83,9 +59,9 @@ interface CircleBlobOptions {
 }
 
 class CircleBlob {
-  private animStates: CircleBlobPointState[];
-  private minDuration: number;
-  private maxDuration: number;
+  private readonly animStates: CircleBlobPointState[];
+  private readonly minDuration: number;
+  private readonly maxDuration: number;
   private points: BlobPoint[];
 
   constructor(
@@ -154,7 +130,7 @@ const centralBlobsRotationTime = 120000;
 
 class CentralBlobs {
   private rotatePos: number = 0;
-  private blobs = Array.from(
+  private readonly blobs = Array.from(
     { length: 4 },
     (_, i) => new CircleBlob(sevenPointCircle, { startPoints: startBlobs[i] }),
   );
@@ -202,7 +178,7 @@ interface BackgroundBlob {
 const bgBlobsAlphaTime = 2000;
 
 class BackgroundBlobs {
-  private bgBlobs: BackgroundBlob[] = [];
+  private readonly bgBlobs: BackgroundBlob[] = [];
   private overallAlphaPos = 0;
 
   constructor(bounds: DOMRect) {
@@ -309,10 +285,12 @@ const deltaMultiplierStep = 0.01;
 
 export function startBlobAnim(canvas: HTMLCanvasElement) {
   let lastTime: number;
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   const centralBlobs = new CentralBlobs();
   let backgroundBlobs: BackgroundBlobs;
-  const loadImgEl = document.querySelector('.' + style.loadImg)!;
+  const loadImgEl = document.querySelector('.' + style.loadImg);
+  if (!loadImgEl) return;
   let hasFocus = document.hasFocus();
   let deltaMultiplier = hasFocus ? 1 : 0;
   let animating = true;
@@ -335,13 +313,13 @@ export function startBlobAnim(canvas: HTMLCanvasElement) {
   });
   resizeObserver.observe(canvas);
 
-  addEventListener('focus', focusListener);
-  addEventListener('blur', blurListener);
+  globalThis.addEventListener('focus', focusListener);
+  globalThis.addEventListener('blur', blurListener);
   document.addEventListener('visibilitychange', visibilityListener);
 
   function destruct() {
-    removeEventListener('focus', focusListener);
-    removeEventListener('blur', blurListener);
+    globalThis.removeEventListener('focus', focusListener);
+    globalThis.removeEventListener('blur', blurListener);
     resizeObserver.disconnect();
     document.removeEventListener('visibilitychange', visibilityListener);
   }

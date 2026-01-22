@@ -1,0 +1,20 @@
+# Rust build artifacts
+target/
+
+# Generated files
+gen/
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.pdb
+
+# Mobile build outputs
+gen/android/
+gen/apple/

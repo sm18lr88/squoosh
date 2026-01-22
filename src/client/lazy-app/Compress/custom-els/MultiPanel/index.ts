@@ -11,7 +11,7 @@ const openOneOnlyAttr = 'open-one-only';
 function getClosestHeading(el: Element): HTMLElement | undefined {
   // Look for the child of multi-panel, but stop at interactive elements like links & buttons
   const closestEl = el.closest('multi-panel > *, a, button');
-  if (closestEl && closestEl.classList.contains(style.panelHeading)) {
+  if (closestEl?.classList.contains(style.panelHeading)) {
     return closestEl as HTMLElement;
   }
   return undefined;
@@ -27,9 +27,6 @@ async function close(heading: HTMLElement) {
 
   heading.removeAttribute('content-expanded');
   content.setAttribute('aria-expanded', 'false');
-
-  // Wait a microtask so other calls to open/close can get the final sizes.
-  await null;
 
   await transitionHeight(content, {
     from,
@@ -52,9 +49,6 @@ async function open(heading: HTMLElement) {
   content.setAttribute('aria-expanded', 'true');
 
   const to = content.getBoundingClientRect().height;
-
-  // Wait a microtask so other calls to open/close can get the final sizes.
-  await null;
 
   await transitionHeight(content, {
     from,
@@ -112,7 +106,9 @@ export default class MultiPanel extends HTMLElement {
 
   // KeyDown event handler
   private _onKeyDown(event: KeyboardEvent) {
-    const selectedEl = document.activeElement!;
+    const selectedEl = document.activeElement;
+    if (!selectedEl) return;
+
     const heading = getClosestHeading(selectedEl);
 
     // if keydown event is not on heading element, ignore
@@ -197,7 +193,7 @@ export default class MultiPanel extends HTMLElement {
 
     while (heading) {
       const content = heading.nextElementSibling;
-      const randomId = Math.random().toString(36).substr(2, 9);
+      const randomId = Math.random().toString(36).substring(2, 11);
 
       // if at the end of this loop, runout of element for content,
       // it means it has odd number of elements. log error and set heading to end the loop.
@@ -259,14 +255,17 @@ export default class MultiPanel extends HTMLElement {
 
   // returns heading that is before currently selected one.
   private _prevHeading() {
+    const activeElement = document.activeElement;
+    if (!activeElement) return;
+
     // activeElement would be the currently selected heading
     // 2 elements before that would be the previous heading unless it is the first element.
-    if (this.firstElementChild === document.activeElement) {
+    if (this.firstElementChild === activeElement) {
       return this.firstElementChild as HTMLElement;
     }
     // previous Element of active Element is previous Content,
     // previous Element of previous Content is previousHeading
-    const previousContent = document.activeElement!.previousElementSibling;
+    const previousContent = activeElement.previousElementSibling;
     if (previousContent) {
       return previousContent.previousElementSibling as HTMLElement;
     }
@@ -274,9 +273,12 @@ export default class MultiPanel extends HTMLElement {
 
   // returns heading that is after currently selected one.
   private _nextHeading() {
+    const activeElement = document.activeElement;
+    if (!activeElement) return;
+
     // activeElement would be the currently selected heading
     // 2 elemements after that would be the next heading.
-    const nextContent = document.activeElement!.nextElementSibling;
+    const nextContent = activeElement.nextElementSibling;
     if (nextContent) {
       return nextContent.nextElementSibling as HTMLElement;
     }
@@ -297,9 +299,7 @@ export default class MultiPanel extends HTMLElement {
     }
     // otherwise return 2nd from the last
     const lastContent = this.lastElementChild;
-    if (lastContent) {
-      return lastContent.previousElementSibling as HTMLElement;
-    }
+    return lastContent?.previousElementSibling as HTMLElement;
   }
 
   /**
@@ -309,12 +309,18 @@ export default class MultiPanel extends HTMLElement {
     return this.hasAttribute(openOneOnlyAttr);
   }
 
-  set openOneOnly(val: boolean) {
-    if (val) {
-      this.setAttribute(openOneOnlyAttr, '');
-    } else {
-      this.removeAttribute(openOneOnlyAttr);
-    }
+  /**
+   * Enable open-one-only mode: only one panel can be open at once.
+   */
+  enableOpenOneOnly() {
+    this.setAttribute(openOneOnlyAttr, '');
+  }
+
+  /**
+   * Disable open-one-only mode: multiple panels can be open at once.
+   */
+  disableOpenOneOnly() {
+    this.removeAttribute(openOneOnlyAttr);
   }
 }
 

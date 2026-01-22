@@ -10,11 +10,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {
-  EncodeOptions,
-  MozJpegColorSpace,
-} from 'codecs/mozjpeg/enc/mozjpeg_enc';
-export { EncodeOptions, MozJpegColorSpace };
+export { EncodeOptions, MozJpegColorSpace } from 'codecs/mozjpeg/enc/mozjpeg_enc';
+import type { EncodeOptions } from 'codecs/mozjpeg/enc/mozjpeg_enc';
+import { MozJpegColorSpace } from 'codecs/mozjpeg/enc/mozjpeg_enc';
 
 export const label = 'MozJPEG';
 export const mimeType = 'image/jpeg';

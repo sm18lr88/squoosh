@@ -1,7 +1,9 @@
-function cleanSetOrMerge<A extends any[] | object>(
+type ArrayOrObject = any[] | object;
+
+function cleanSetOrMerge<A extends ArrayOrObject>(
   source: A,
   keys: string | number | string[],
-  toSetOrMerge: any[] | object,
+  toSetOrMerge: ArrayOrObject,
   merge: boolean,
 ): A {
   const splitKeys = Array.isArray(keys) ? keys : ('' + keys).split('.');
@@ -15,21 +17,21 @@ function cleanSetOrMerge<A extends any[] | object>(
   const lastIndex = splitKeys.length - 1;
 
   for (const [i, key] of splitKeys.entries()) {
-    if (i !== lastIndex) {
-      // Copy everything along the path.
-      last = last[key] = copy(last[key]);
-    } else {
+    if (i === lastIndex) {
       // Merge or set.
       last[key] = merge
         ? Object.assign(copy(last[key]), toSetOrMerge)
         : toSetOrMerge;
+    } else {
+      // Copy everything along the path.
+      last = last[key] = copy(last[key]);
     }
   }
 
   return newObject;
 }
 
-function copy<A extends any[] | object>(source: A): A {
+function copy<A extends ArrayOrObject>(source: A): A {
   // Some type cheating here, as TypeScript can't infer between generic types.
   if (Array.isArray(source)) return [...source] as any;
   return { ...(source as any) };
@@ -40,10 +42,10 @@ function copy<A extends any[] | object>(source: A): A {
  * @param keys Path to modify, eg "foo.bar.baz".
  * @param toMerge A value to merge into the value at the path.
  */
-export function cleanMerge<A extends any[] | object>(
+export function cleanMerge<A extends ArrayOrObject>(
   source: A,
   keys: string | number | string[],
-  toMerge: any[] | object,
+  toMerge: ArrayOrObject,
 ): A {
   return cleanSetOrMerge(source, keys, toMerge, true);
 }
@@ -53,7 +55,7 @@ export function cleanMerge<A extends any[] | object>(
  * @param keys Path to modify, eg "foo.bar.baz".
  * @param newValue A value to set at the path.
  */
-export function cleanSet<A extends any[] | object>(
+export function cleanSet<A extends ArrayOrObject>(
   source: A,
   keys: string | number | string[],
   newValue: any,

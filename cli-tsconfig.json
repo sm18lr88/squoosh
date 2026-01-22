@@ -1,0 +1,17 @@
+{
+  "extends": "./generic-tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2024",
+    "outDir": "./dist/cli",
+    "rootDir": "./src/cli",
+    "declaration": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/cli/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

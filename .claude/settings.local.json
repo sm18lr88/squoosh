@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm view:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix nested function depth warnings in performance tests\n\nExtract deeply nested functions to reduce complexity and improve code maintainability. Moved helper functions for calculating averages and logging encoder statistics to the top level, and refactored parallel processing to use a named function instead of inline async arrow functions.\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(gh:*)",
+      "Bash(git config:*)",
+      "Bash(git push:*)",
+      "Bash(git remote add:*)"
+    ]
+  }
+}

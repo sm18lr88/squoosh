@@ -15,7 +15,7 @@ import type { EncodeOptions } from '../shared/meta';
 import { initEmscriptenModule } from 'features/worker-utils';
 import checkThreadsSupport from 'worker-shared/supports-wasm-threads';
 
-let emscriptenModule: Promise<AVIFModule>;
+let emscriptenModule: Promise<AVIFModule> | undefined;
 
 async function init() {
   if (await checkThreadsSupport()) {
@@ -30,12 +30,12 @@ export default async function encode(
   data: ImageData,
   options: EncodeOptions,
 ): Promise<ArrayBuffer> {
-  if (!emscriptenModule) emscriptenModule = init();
+  if (emscriptenModule === undefined) emscriptenModule = init();
 
   const module = await emscriptenModule;
   const result = module.encode(data.data, data.width, data.height, options);
 
   if (!result) throw new Error('Encoding error');
 
-  return result.buffer;
+  return result.buffer as ArrayBuffer;
 }

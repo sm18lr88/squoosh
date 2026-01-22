@@ -10,8 +10,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { promises as fsp } from 'fs';
-import { join as joinPath } from 'path';
+import { promises as fsp } from 'node:fs';
+import { join as joinPath } from 'node:path';
 
 import render from 'preact-render-to-string';
 import { VNode } from 'preact';
@@ -50,11 +50,11 @@ export function writeFiles(toOutput: OutputMap) {
  */
 export function escapeStyleScriptContent(str: string): string {
   return str
-    .replace(/<!--/g, '<\\!--')
-    .replace(/<script/g, '<\\script')
-    .replace(/<\/script/g, '<\\/script')
-    .replace(/<style/g, '<\\style')
-    .replace(/<\/style/g, '<\\/style');
+    .replaceAll('<!--', String.raw`<\!--`)
+    .replaceAll('<script', String.raw`<\script`)
+    .replaceAll('</script', String.raw`<\/script`)
+    .replaceAll('<style', String.raw`<\style`)
+    .replaceAll('</style', String.raw`<\/style`);
 }
 
 /**

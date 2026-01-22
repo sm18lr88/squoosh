@@ -52,7 +52,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // Don't care about other-origin URLs
-  if (url.origin !== location.origin) return;
+  if (url.origin !== globalThis.location.origin) return;
 
   if (url.pathname === '/editor') {
     event.respondWith(Response.redirect('/'));

@@ -65,19 +65,19 @@ export class Options extends Component<Props, State> {
     lossless: false,
   } as State;
 
-  private _inputChangeCallbacks = new Map<string, (event: Event) => void>();
+  private readonly _inputChangeCallbacks = new Map<string, (event: Event) => void>();
 
-  private _inputChange = (prop: keyof State, type: 'number' | 'boolean') => {
+  private readonly _inputChange = (prop: keyof State, type: 'number' | 'boolean') => {
     // Cache the callback for performance
     if (!this._inputChangeCallbacks.has(prop)) {
       this._inputChangeCallbacks.set(prop, (event: Event) => {
         const formEl = event.target as HTMLInputElement | HTMLSelectElement;
-        const newVal =
-          type === 'boolean'
-            ? 'checked' in formEl
-              ? formEl.checked
-              : !!formEl.value
-            : Number(formEl.value);
+        let newVal: boolean | number;
+        if (type === 'boolean') {
+          newVal = 'checked' in formEl ? formEl.checked : !!formEl.value;
+        } else {
+          newVal = Number(formEl.value);
+        }
 
         const newState: Partial<State> = {
           [prop]: newVal,
@@ -98,7 +98,8 @@ export class Options extends Component<Props, State> {
           lossyPalette: optionState.lossless ? optionState.slightLoss : false,
           decodingSpeedTier: optionState.decodingSpeedTier,
           photonNoiseIso: optionState.photonNoiseIso,
-          lossyModular: optionState.quality < 7 ? true : optionState.alternativeLossy,
+          lossyModular:
+            optionState.quality < 7 ? true : optionState.alternativeLossy,
         };
 
         // Updating options, so we don't recalculate in getDerivedStateFromProps.
@@ -110,11 +111,11 @@ export class Options extends Component<Props, State> {
       });
     }
 
-    return this._inputChangeCallbacks.get(prop)!;
+    return this._inputChangeCallbacks.get(prop) as (event: Event) => void;
   };
 
   render(
-    {}: Props,
+    _props: Props,
     {
       effort,
       quality,

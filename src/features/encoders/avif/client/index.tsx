@@ -93,9 +93,9 @@ export class Options extends Component<Props, State> {
     showAdvanced: false,
   } as State;
 
-  private _inputChangeCallbacks = new Map<string, (event: Event) => void>();
+  private readonly _inputChangeCallbacks = new Map<string, (event: Event) => void>();
 
-  private _inputChange = (
+  private readonly _inputChange = (
     prop: keyof State,
     type: 'number' | 'boolean' | 'string',
   ) => {
@@ -103,14 +103,14 @@ export class Options extends Component<Props, State> {
     if (!this._inputChangeCallbacks.has(prop)) {
       this._inputChangeCallbacks.set(prop, (event: Event) => {
         const formEl = event.target as HTMLInputElement | HTMLSelectElement;
-        const newVal =
-          type === 'boolean'
-            ? 'checked' in formEl
-              ? formEl.checked
-              : !!formEl.value
-            : type === 'number'
-            ? Number(formEl.value)
-            : formEl.value;
+        let newVal: boolean | number | string;
+        if (type === 'boolean') {
+          newVal = 'checked' in formEl ? formEl.checked : !!formEl.value;
+        } else if (type === 'number') {
+          newVal = Number(formEl.value);
+        } else {
+          newVal = formEl.value;
+        }
 
         const newState: Partial<State> = {
           [prop]: newVal,
@@ -151,7 +151,7 @@ export class Options extends Component<Props, State> {
       });
     }
 
-    return this._inputChangeCallbacks.get(prop)!;
+    return this._inputChangeCallbacks.get(prop) as (event: Event) => void;
   };
 
   render(

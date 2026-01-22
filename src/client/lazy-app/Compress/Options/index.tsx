@@ -43,23 +43,24 @@ type PartialButNotUndefined<T> = {
   [P in keyof T]: T[P];
 };
 
-const supportedEncoderMapP: Promise<PartialButNotUndefined<typeof encoderMap>> =
-  (async () => {
-    const supportedEncoderMap: PartialButNotUndefined<typeof encoderMap> = {
-      ...encoderMap,
-    };
+async function getSupportedEncoderMap(): Promise<PartialButNotUndefined<typeof encoderMap>> {
+  const supportedEncoderMap: PartialButNotUndefined<typeof encoderMap> = {
+    ...encoderMap,
+  };
 
-    // Filter out entries where the feature test fails
-    await Promise.all(
-      Object.entries(encoderMap).map(async ([encoderName, details]) => {
-        if ('featureTest' in details && !(await details.featureTest())) {
-          delete supportedEncoderMap[encoderName as keyof typeof encoderMap];
-        }
-      }),
-    );
+  // Filter out entries where the feature test fails
+  await Promise.all(
+    Object.entries(encoderMap).map(async ([encoderName, details]) => {
+      if ('featureTest' in details && !(await details.featureTest())) {
+        delete supportedEncoderMap[encoderName as keyof typeof encoderMap];
+      }
+    }),
+  );
 
-    return supportedEncoderMap;
-  })();
+  return supportedEncoderMap;
+}
+
+const supportedEncoderMapP = getSupportedEncoderMap();
 
 export default class Options extends Component<Props, State> {
   state: State = {
@@ -70,35 +71,35 @@ export default class Options extends Component<Props, State> {
 
   constructor() {
     super();
-    supportedEncoderMapP.then((supportedEncoderMap) =>
-      this.setState({ supportedEncoderMap }),
-    );
   }
 
-  private setLeftSideSettings = () => {
+  private readonly setLeftSideSettings = () => {
     this.setState({
       leftSideSettings: localStorage.getItem('leftSideSettings'),
     });
   };
 
-  private setRightSideSettings = () => {
+  private readonly setRightSideSettings = () => {
     this.setState({
       rightSideSettings: localStorage.getItem('rightSideSettings'),
     });
   };
 
   componentDidMount(): void {
+    supportedEncoderMapP.then((supportedEncoderMap) =>
+      this.setState({ supportedEncoderMap }),
+    );
     // Changing the state when side setting is stored in localstorage
-    window.addEventListener('leftSideSettings', this.setLeftSideSettings);
-    window.addEventListener('rightSideSettings', this.setRightSideSettings);
+    globalThis.addEventListener('leftSideSettings', this.setLeftSideSettings);
+    globalThis.addEventListener('rightSideSettings', this.setRightSideSettings);
   }
 
   componentWillUnmount(): void {
-    window.removeEventListener('leftSideSettings', this.setLeftSideSettings);
-    window.removeEventListener('removeSideSettings', this.setRightSideSettings);
+    globalThis.removeEventListener('leftSideSettings', this.setLeftSideSettings);
+    globalThis.removeEventListener('removeSideSettings', this.setRightSideSettings);
   }
 
-  private onEncoderTypeChange = (event: Event) => {
+  private readonly onEncoderTypeChange = (event: Event) => {
     const el = event.currentTarget as HTMLSelectElement;
 
     // The select element only has values matching encoder types,
@@ -107,7 +108,7 @@ export default class Options extends Component<Props, State> {
     this.props.onEncoderTypeChange(this.props.index, type);
   };
 
-  private onProcessorEnabledChange = (event: Event) => {
+  private readonly onProcessorEnabledChange = (event: Event) => {
     const el = event.currentTarget as HTMLInputElement;
     const processor = el.name.split('.')[0] as keyof ProcessorState;
 
@@ -117,35 +118,56 @@ export default class Options extends Component<Props, State> {
     );
   };
 
-  private onQuantizerOptionsChange = (opts: ProcessorOptions['quantize']) => {
+  private readonly onQuantizerOptionsChange = (opts: ProcessorOptions['quantize']) => {
     this.props.onProcessorOptionsChange(
       this.props.index,
       cleanMerge(this.props.processorState, 'quantize', opts),
     );
   };
 
-  private onResizeOptionsChange = (opts: ProcessorOptions['resize']) => {
+  private readonly onResizeOptionsChange = (opts: ProcessorOptions['resize']) => {
     this.props.onProcessorOptionsChange(
       this.props.index,
       cleanMerge(this.props.processorState, 'resize', opts),
     );
   };
 
-  private onEncoderOptionsChange = (newOptions: EncoderOptions) => {
+  private readonly onEncoderOptionsChange = (newOptions: EncoderOptions) => {
     this.props.onEncoderOptionsChange(this.props.index, newOptions);
   };
 
-  private onCopyToOtherSideClick = () => {
+  private readonly onCopyToOtherSideClick = () => {
     this.props.onCopyToOtherSideClick(this.props.index);
   };
 
-  private onSaveSideSettingClick = () => {
+  private readonly onSaveSideSettingClick = () => {
     this.props.onSaveSideSettingsClick(this.props.index);
   };
 
-  private onImportSideSettingsClick = () => {
+  private readonly onImportSideSettingsClick = () => {
     this.props.onImportSideSettingsClick(this.props.index);
   };
+
+  private getImportButtonClass(): string {
+    const { index } = this.props;
+    const { leftSideSettings, rightSideSettings } = this.state;
+
+    const isDisabled =
+      (!leftSideSettings && index === 0) ||
+      (!rightSideSettings && index === 1);
+
+    return `${style.importButton} ${isDisabled ? style.buttonOpacity : ''}`;
+  }
+
+  private isImportDisabled(): boolean {
+    const { index } = this.props;
+    const { leftSideSettings, rightSideSettings } = this.state;
+
+    return (
+      (!leftSideSettings && index === 0) ||
+      (!rightSideSettings && index === 1)
+    );
+  }
 
   render(
     { source, encoderState, processorState }: Props,
@@ -164,7 +186,7 @@ export default class Options extends Component<Props, State> {
         }
       >
         <Expander>
-          {!encoderState ? null : (
+          {encoderState && (
             <div>
               <h3 class={style.optionsTitle}>
                 <div class={style.titleAndButtons}>
@@ -184,32 +206,17 @@ export default class Options extends Component<Props, State> {
                     <SaveIcon />
                   </button>
                   <button
-                    class={
-                      style.importButton +
-                      ' ' +
-                      (!this.state.leftSideSettings && this.props.index === 0
-                        ? style.buttonOpacity
-                        : '') +
-                      ' ' +
-                      (!this.state.rightSideSettings && this.props.index === 1
-                        ? style.buttonOpacity
-                        : '')
-                    }
+                    class={this.getImportButtonClass()}
                     title="Import saved side settings"
                     onClick={this.onImportSideSettingsClick}
-                    disabled={
-                      // Disabled if this side's settings haven't been saved
-                      (!this.state.leftSideSettings &&
-                        this.props.index === 0) ||
-                      (!this.state.rightSideSettings && this.props.index === 1)
-                    }
+                    disabled={this.isImportDisabled()}
                   >
                     <ImportIcon />
                   </button>
                 </div>
               </h3>
               <label class={style.sectionEnabler}>
-                Resize
+                Resize{' '}
                 <Toggle
                   name="resize.enable"
                   checked={!!processorState.resize.enabled}
@@ -217,19 +224,19 @@ export default class Options extends Component<Props, State> {
                 />
               </label>
               <Expander>
-                {processorState.resize.enabled ? (
+                {processorState.resize.enabled && (
                   <ResizeOptionsComponent
-                    isVector={Boolean(source && source.vectorImage)}
+                    isVector={Boolean(source?.vectorImage)}
                     inputWidth={source ? source.preprocessed.width : 1}
                     inputHeight={source ? source.preprocessed.height : 1}
                     options={processorState.resize}
                     onChange={this.onResizeOptionsChange}
                   />
-                ) : null}
+                )}
               </Expander>
 
               <label class={style.sectionEnabler}>
-                Reduce palette
+                Reduce palette{' '}
                 <Toggle
                   name="quantize.enable"
                   checked={!!processorState.quantize.enabled}
@@ -237,12 +244,12 @@ export default class Options extends Component<Props, State> {
                 />
               </label>
               <Expander>
-                {processorState.quantize.enabled ? (
+                {processorState.quantize.enabled && (
                   <QuantOptionsComponent
                     options={processorState.quantize}
                     onChange={this.onQuantizerOptionsChange}
                   />
-                ) : null}
+                )}
               </Expander>
             </div>
           )}
@@ -261,7 +268,7 @@ export default class Options extends Component<Props, State> {
                 this.props.source ? `(${this.props.source.file.name})` : ''
               }`}</option>
               {Object.entries(supportedEncoderMap).map(([type, encoder]) => (
-                <option value={type}>{encoder.meta.label}</option>
+                <option key={type} value={type}>{encoder.meta.label}</option>
               ))}
             </Select>
           ) : (
@@ -277,7 +284,7 @@ export default class Options extends Component<Props, State> {
               options={
                 // Casting options, as encoderOptionsComponentMap[encodeData.type] ensures
                 // the correct type, but typescript isn't smart enough.
-                encoderState!.options as any
+                encoderState.options as any
               }
               onChange={this.onEncoderOptionsChange}
             />

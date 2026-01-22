@@ -33,7 +33,7 @@ async function decodeImage(url: string): Promise<HTMLImageElement> {
   img.src = url;
   const loaded = new Promise<void>((resolve, reject) => {
     img.onload = () => resolve();
-    img.onerror = () => reject(Error('Image loading error'));
+    img.onerror = () => reject(new Error('Image loading error'));
   });
 
   if (img.decode) {
@@ -68,7 +68,7 @@ export function canDecodeImageType(type: string): Promise<boolean> {
       picture.append(source, img);
 
       // Wait a single microtick just for the `img.currentSrc` to get populated.
-      await 0;
+      await Promise.resolve();
       // At this point `img.currentSrc` will contain "data:,x" if format is supported and ""
       // otherwise.
       return !!img.currentSrc;
@@ -77,7 +77,7 @@ export function canDecodeImageType(type: string): Promise<boolean> {
     canDecodeCache.set(type, resultPromise);
   }
 
-  return canDecodeCache.get(type)!;
+  return canDecodeCache.get(type) as Promise<boolean>;
 }
 
 export function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
@@ -106,7 +106,7 @@ const magicNumberMapInput = [
   [/^qoif/, 'image/qoi'],
 ] as const;
 
-export type ImageMimeTypes = typeof magicNumberMapInput[number][1];
+export type ImageMimeTypes = (typeof magicNumberMapInput)[number][1];
 
 const magicNumberToMimeType = new Map<RegExp, ImageMimeTypes>(
   magicNumberMapInput,
@@ -144,7 +144,7 @@ export async function builtinDecode(
   // Prefer createImageBitmap as it's the off-thread option for Firefox.
   const drawable = await abortable<HTMLImageElement | ImageBitmap>(
     signal,
-    'createImageBitmap' in self ? createImageBitmap(blob) : blobToImg(blob),
+    'createImageBitmap' in globalThis ? createImageBitmap(blob) : blobToImg(blob),
   );
   return drawableToImageData(drawable);
 }
@@ -199,20 +199,38 @@ export function inputFieldValue(field: any, defaultVal: string = ''): string {
  */
 export function konami(): Promise<void> {
   return new Promise((resolve) => {
-    // Keycodes for: ↑ ↑ ↓ ↓ ← → ← → B A
-    const expectedPattern = '38384040373937396665';
-    let rollingPattern = '';
+    // Keys for: ↑ ↑ ↓ ↓ ← → ← → B A
+    const expectedPattern = [
+      'ArrowUp',
+      'ArrowUp',
+      'ArrowDown',
+      'ArrowDown',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowLeft',
+      'ArrowRight',
+      'b',
+      'a',
+    ];
+    const rollingPattern: string[] = [];
 
     const listener = (event: KeyboardEvent) => {
-      rollingPattern += event.keyCode;
-      rollingPattern = rollingPattern.slice(-expectedPattern.length);
-      if (rollingPattern === expectedPattern) {
-        window.removeEventListener('keydown', listener);
+      rollingPattern.push(event.key.toLowerCase());
+      if (rollingPattern.length > expectedPattern.length) {
+        rollingPattern.shift();
+      }
+      if (
+        rollingPattern.length === expectedPattern.length &&
+        rollingPattern.every(
+          (key, i) => key === expectedPattern[i].toLowerCase(),
+        )
+      ) {
+        globalThis.removeEventListener('keydown', listener);
         resolve();
       }
     };
 
-    window.addEventListener('keydown', listener);
+    globalThis.addEventListener('keydown', listener);
   });
 }
 
@@ -241,7 +259,7 @@ export async function transitionHeight(
 
   el.style.height = from + 'px';
   // Force a style calc so the browser picks up the start value.
-  getComputedStyle(el).transform;
+  void getComputedStyle(el).transform;
   el.style.transition = `height ${duration}ms ${easing}`;
   el.style.height = to + 'px';
 

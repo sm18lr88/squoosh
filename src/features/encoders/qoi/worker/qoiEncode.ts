@@ -14,7 +14,7 @@ import qoiEncoder, { QoiModule } from 'codecs/qoi/enc/qoi_enc';
 import type { EncodeOptions } from '../shared/meta';
 import { initEmscriptenModule } from 'features/worker-utils';
 
-let emscriptenModule: Promise<QoiModule>;
+let emscriptenModule: Promise<QoiModule> | undefined;
 
 async function init() {
   return initEmscriptenModule(qoiEncoder);
@@ -24,7 +24,7 @@ export default async function encode(
   data: ImageData,
   options: EncodeOptions,
 ): Promise<ArrayBuffer> {
-  if (!emscriptenModule) {
+  if (emscriptenModule === undefined) {
     emscriptenModule = init();
   }
 

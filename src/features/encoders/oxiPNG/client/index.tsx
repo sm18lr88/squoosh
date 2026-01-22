@@ -1,8 +1,7 @@
-import { inputFieldChecked } from 'client/lazy-app/util';
+import { inputFieldChecked, inputFieldValueAsNumber, preventDefault } from 'client/lazy-app/util';
 import { EncodeOptions } from '../shared/meta';
 import type WorkerBridge from 'client/lazy-app/worker-bridge';
 import { h, Component } from 'preact';
-import { inputFieldValueAsNumber, preventDefault } from 'client/lazy-app/util';
 import * as style from 'client/lazy-app/Compress/Options/style.css';
 import Range from 'client/lazy-app/Compress/Options/Range';
 import Checkbox from 'client/lazy-app/Compress/Options/Checkbox';
@@ -22,7 +21,7 @@ type Props = {
 };
 
 export class Options extends Component<Props, {}> {
-  onChange = (event: Event) => {
+  readonly onChange = (event: Event) => {
     const form = (event.currentTarget as HTMLInputElement).closest(
       'form',
     ) as HTMLFormElement;

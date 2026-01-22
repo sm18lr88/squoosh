@@ -46,16 +46,15 @@ function browserResize(data: ImageData, opts: BrowserResizeOptions): ImageData {
     ({ sx, sy, sw, sh } = getContainOffsets(sw, sh, opts.width, opts.height));
   }
 
-  return builtinResize(
-    data,
+  return builtinResize(data, {
     sx,
     sy,
     sw,
     sh,
-    opts.width,
-    opts.height,
-    opts.method.slice('browser-'.length) as BuiltinResizeMethod,
-  );
+    dw: opts.width,
+    dh: opts.height,
+    method: opts.method.slice('browser-'.length) as BuiltinResizeMethod,
+  });
 }
 
 function vectorResize(
@@ -88,7 +87,7 @@ export async function resize(
   workerBridge: WorkerBridge,
 ) {
   if (options.method === 'vector') {
-    if (!source.vectorImage) throw Error('No vector image available');
+    if (!source.vectorImage) throw new Error('No vector image available');
     return vectorResize(source.vectorImage, options);
   }
   if (isWorkerOptions(options)) {
@@ -98,7 +97,7 @@ export async function resize(
 }
 
 interface Props {
-  isVector: Boolean;
+  isVector: boolean;
   inputWidth: number;
   inputHeight: number;
   options: ResizeOptions;
@@ -116,7 +115,7 @@ export class Options extends Component<Props, State> {
     maintainAspect: true,
   };
 
-  private form?: HTMLFormElement;
+  private readonly form?: HTMLFormElement;
   private presetWidths: { [idx: number]: number } = {};
   private presetHeights: { [idx: number]: number } = {};
 
@@ -126,7 +125,8 @@ export class Options extends Component<Props, State> {
   }
 
   private reportOptions() {
-    const form = this.form!;
+    if (!this.form) return;
+    const form = this.form;
     const width = form.width as HTMLInputElement;
     const height = form.height as HTMLInputElement;
     const { options } = this.props;
@@ -148,7 +148,7 @@ export class Options extends Component<Props, State> {
     this.props.onChange(newOptions);
   }
 
-  private onChange = () => {
+  private readonly onChange = () => {
     this.reportOptions();
   };
 
@@ -156,10 +156,10 @@ export class Options extends Component<Props, State> {
     return this.props.inputWidth / this.props.inputHeight;
   }
 
-  componentDidUpdate(prevProps: Props, prevState: State) {
-    if (!prevState.maintainAspect && this.state.maintainAspect) {
-      this.form!.height.value = Math.round(
-        Number(this.form!.width.value) / this.getAspect(),
+  componentDidUpdate(_prevProps: Props, prevState: State) {
+    if (!prevState.maintainAspect && this.state.maintainAspect && this.form) {
+      this.form.height.value = Math.round(
+        Number(this.form.width.value) / this.getAspect(),
       );
       this.reportOptions();
     }
@@ -174,19 +174,19 @@ export class Options extends Component<Props, State> {
     }
   }
 
-  private onWidthInput = () => {
-    if (this.state.maintainAspect) {
-      const width = inputFieldValueAsNumber(this.form!.width);
-      this.form!.height.value = Math.round(width / this.getAspect());
+  private readonly onWidthInput = () => {
+    if (this.state.maintainAspect && this.form) {
+      const width = inputFieldValueAsNumber(this.form.width);
+      this.form.height.value = Math.round(width / this.getAspect());
     }
 
     this.reportOptions();
   };
 
-  private onHeightInput = () => {
-    if (this.state.maintainAspect) {
-      const height = inputFieldValueAsNumber(this.form!.height);
-      this.form!.width.value = Math.round(height * this.getAspect());
+  private readonly onHeightInput = () => {
+    if (this.state.maintainAspect && this.form) {
+      const height = inputFieldValueAsNumber(this.form.height);
+      this.form.width.value = Math.round(height * this.getAspect());
     }
 
     this.reportOptions();
@@ -213,13 +213,13 @@ export class Options extends Component<Props, State> {
     return 'custom';
   }
 
-  private onPresetChange = (event: Event) => {
+  private readonly onPresetChange = (event: Event) => {
     const select = event.target as HTMLSelectElement;
-    if (select.value === 'custom') return;
+    if (select.value === 'custom' || !this.form) return;
     const multiplier = Number(select.value);
-    (this.form!.width as HTMLInputElement).value =
+    (this.form.width as HTMLInputElement).value =
       Math.round(this.props.inputWidth * multiplier) + '';
-    (this.form!.height as HTMLInputElement).value =
+    (this.form.height as HTMLInputElement).value =
       Math.round(this.props.inputHeight * multiplier) + '';
     this.reportOptions();
   };
@@ -254,13 +254,13 @@ export class Options extends Component<Props, State> {
           Preset:
           <Select value={this.getPreset()} onChange={this.onPresetChange}>
             {sizePresets.map((preset) => (
-              <option value={preset}>{preset * 100}%</option>
+              <option key={preset} value={preset}>{preset * 100}%</option>
             ))}
             <option value="custom">Custom</option>
           </Select>
         </label>
         <label class={style.optionTextFirst}>
-          Width:
+          Width:{' '}
           <input
             required
             class={style.textField}
@@ -272,7 +272,7 @@ export class Options extends Component<Props, State> {
           />
         </label>
         <label class={style.optionTextFirst}>
-          Height:
+          Height:{' '}
           <input
             required
             class={style.textField}

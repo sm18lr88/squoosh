@@ -9,9 +9,9 @@ export default async function checkThreadsSupport() {
 
   // Right now, this check is only run from a worker.
   // More implementation is needed to run it from a page.
-  if (!('importScripts' in self)) {
-    throw Error('Not implemented');
+  if (!('importScripts' in globalThis)) {
+    throw new Error('Not implemented');
   }
 
-  return 'Worker' in self;
+  return 'Worker' in globalThis;
 }

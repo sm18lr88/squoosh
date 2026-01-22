@@ -14,13 +14,13 @@ import imagequant, { QuantizerModule } from 'codecs/imagequant/imagequant';
 import { initEmscriptenModule } from 'features/worker-utils';
 import { Options } from '../shared/meta';
 
-let emscriptenModule: Promise<QuantizerModule>;
+let emscriptenModule: Promise<QuantizerModule> | undefined;
 
 export default async function process(
   data: ImageData,
   opts: Options,
 ): Promise<ImageData> {
-  if (!emscriptenModule) {
+  if (emscriptenModule === undefined) {
     emscriptenModule = initEmscriptenModule(imagequant);
   }
 
@@ -36,5 +36,5 @@ export default async function process(
         opts.dither,
       );
 
-  return new ImageData(result, data.width, data.height);
+  return new ImageData(new Uint8ClampedArray(result), data.width, data.height);
 }

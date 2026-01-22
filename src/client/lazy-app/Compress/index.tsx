@@ -98,29 +98,34 @@ async function decodeImage(
   const canDecode = await abortable(signal, canDecodeImageType(mimeType));
 
   try {
-    if (!canDecode) {
-      if (mimeType === 'image/avif') {
-        return await workerBridge.avifDecode(signal, blob);
-      }
-      if (mimeType === 'image/webp') {
-        return await workerBridge.webpDecode(signal, blob);
-      }
-      if (mimeType === 'image/jxl') {
-        return await workerBridge.jxlDecode(signal, blob);
-      }
-      if (mimeType === 'image/webp2') {
-        return await workerBridge.wp2Decode(signal, blob);
-      }
-      if (mimeType === 'image/qoi') {
-        return await workerBridge.qoiDecode(signal, blob);
-      }
+    if (canDecode) {
+      // Try built-in decoding first if available
+      return await builtinDecode(signal, blob);
     }
-    // Otherwise fall through and try built-in decoding for a laugh.
+
+    // Use custom decoders for unsupported types
+    if (mimeType === 'image/avif') {
+      return await workerBridge.avifDecode(signal, blob);
+    }
+    if (mimeType === 'image/webp') {
+      return await workerBridge.webpDecode(signal, blob);
+    }
+    if (mimeType === 'image/jxl') {
+      return await workerBridge.jxlDecode(signal, blob);
+    }
+    if (mimeType === 'image/webp2') {
+      return await workerBridge.wp2Decode(signal, blob);
+    }
+    if (mimeType === 'image/qoi') {
+      return await workerBridge.qoiDecode(signal, blob);
+    }
+
+    // Fall through and try built-in decoding as last resort
     return await builtinDecode(signal, blob);
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') throw err;
     console.log(err);
-    throw Error("Couldn't decode image");
+    throw new Error("Couldn't decode image");
   }
 }
 
@@ -225,14 +230,14 @@ async function processSvg(
   const parser = new DOMParser();
   const text = await abortable(signal, blobToText(blob));
   const document = parser.parseFromString(text, 'image/svg+xml');
-  const svg = document.documentElement!;
+  const svg = document.documentElement;
 
   if (svg.hasAttribute('width') && svg.hasAttribute('height')) {
     return blobToImg(blob);
   }
 
   const viewBox = svg.getAttribute('viewBox');
-  if (viewBox === null) throw Error('SVG must have width/height or viewBox');
+  if (viewBox === null) throw new Error('SVG must have width/height or viewBox');
 
   const viewboxParts = viewBox.split(/\s+/);
   svg.setAttribute('width', viewboxParts[2]);
@@ -278,17 +283,20 @@ function updateDocumentTitle(loadingFileInfo: LoadingFileInfo): void {
 }
 
 export default class Compress extends Component<Props, State> {
-  widthQuery = window.matchMedia('(max-width: 599px)');
+  readonly widthQuery = globalThis.matchMedia('(max-width: 599px)');
 
   state: State = {
     source: undefined,
     loading: false,
     preprocessorState: defaultPreprocessorState,
     // Tasking catched side settings if available otherwise taking default settings
-    sides: [
-      localStorage.getItem('leftSideSettings')
+    sides: (() => {
+      const leftSideSettingsString = localStorage.getItem('leftSideSettings');
+      const rightSideSettingsString = localStorage.getItem('rightSideSettings');
+
+      const leftSide: Side = leftSideSettingsString
         ? {
-            ...JSON.parse(localStorage.getItem('leftSideSettings') as string),
+            ...JSON.parse(leftSideSettingsString),
             loading: false,
           }
         : {
@@ -297,10 +305,11 @@ export default class Compress extends Component<Props, State> {
               encoderState: undefined,
             },
             loading: false,
-          },
-      localStorage.getItem('rightSideSettings')
+          };
+
+      const rightSide: Side = rightSideSettingsString
         ? {
-            ...JSON.parse(localStorage.getItem('rightSideSettings') as string),
+            ...JSON.parse(rightSideSettingsString),
             loading: false,
           }
         : {
@@ -312,8 +321,10 @@ export default class Compress extends Component<Props, State> {
               },
             },
             loading: false,
-          },
-    ],
+          };
+
+      return [leftSide, rightSide];
+    })(),
     mobileView: this.widthQuery.matches,
   };
 
@@ -325,22 +336,24 @@ export default class Compress extends Component<Props, State> {
   // And again one for each side
   private sideAbortControllers = [new AbortController(), new AbortController()];
   /** For debouncing calls to updateImage for each side. */
-  private updateImageTimeout?: number;
+  private updateImageTimeout?: ReturnType<typeof setTimeout>;
 
   constructor(props: Props) {
     super(props);
-    this.widthQuery.addListener(this.onMobileWidthChange);
+    this.widthQuery.addEventListener('change', this.onMobileWidthChange);
     this.sourceFile = props.file;
-    this.queueUpdateImage({ immediate: true });
+  }
 
+  componentDidMount(): void {
+    this.queueUpdateImage({ immediate: true });
     import('../sw-bridge').then(({ mainAppLoaded }) => mainAppLoaded());
   }
 
-  private onMobileWidthChange = () => {
+  private readonly onMobileWidthChange = () => {
     this.setState({ mobileView: this.widthQuery.matches });
   };
 
-  private onEncoderTypeChange = (index: 0 | 1, newType: OutputType): void => {
+  private readonly onEncoderTypeChange = (index: 0 | 1, newType: OutputType): void => {
     this.setState({
       sides: cleanSet(
         this.state.sides,
@@ -355,7 +368,7 @@ export default class Compress extends Component<Props, State> {
     });
   };
 
-  private onProcessorOptionsChange = (
+  private readonly onProcessorOptionsChange = (
     index: 0 | 1,
     options: ProcessorState,
   ): void => {
@@ -368,7 +381,7 @@ export default class Compress extends Component<Props, State> {
     });
   };
 
-  private onEncoderOptionsChange = (
+  private readonly onEncoderOptionsChange = (
     index: 0 | 1,
     options: EncoderOptions,
   ): void => {
@@ -390,7 +403,7 @@ export default class Compress extends Component<Props, State> {
 
   componentWillUnmount(): void {
     updateDocumentTitle({ loading: false });
-    this.widthQuery.removeListener(this.onMobileWidthChange);
+    this.widthQuery.removeEventListener('change', this.onMobileWidthChange);
     this.mainAbortController.abort();
     for (const controller of this.sideAbortControllers) {
       controller.abort();
@@ -416,7 +429,7 @@ export default class Compress extends Component<Props, State> {
     this.queueUpdateImage();
   }
 
-  private onCopyToOtherClick = async (index: 0 | 1) => {
+  private readonly onCopyToOtherClick = async (index: 0 | 1) => {
     const otherIndex = index ? 0 : 1;
     const oldSettings = this.state.sides[otherIndex];
     const newSettings = { ...this.state.sides[index] };
@@ -446,97 +459,58 @@ export default class Compress extends Component<Props, State> {
    * This function saves encodedSettings and latestSettings of
    * particular side in browser local storage
    * @param index : (0|1)
-   * @returns
    */
-  private onSaveSideSettingsClick = async (index: 0 | 1) => {
-    if (index === 0) {
-      const leftSideSettings = JSON.stringify({
-        encodedSettings: this.state.sides[index].encodedSettings,
-        latestSettings: this.state.sides[index].latestSettings,
-      });
-      localStorage.setItem('leftSideSettings', leftSideSettings);
-      // Firing an event when we save side settings in localstorage
-      window.dispatchEvent(new CustomEvent('leftSideSettings'));
-      await this.props.showSnack('Left side settings saved', {
-        timeout: 1500,
-        actions: ['dismiss'],
-      });
-      return;
-    }
+  private readonly onSaveSideSettingsClick = async (index: 0 | 1) => {
+    const isLeftSide = index === 0;
+    const sideKey = isLeftSide ? 'leftSideSettings' : 'rightSideSettings';
+    const message = isLeftSide ? 'Left side settings saved' : 'Right side settings saved';
 
-    if (index === 1) {
-      const rightSideSettings = JSON.stringify({
-        encodedSettings: this.state.sides[index].encodedSettings,
-        latestSettings: this.state.sides[index].latestSettings,
-      });
-      localStorage.setItem('rightSideSettings', rightSideSettings);
-      // Firing an event when we save side settings in localstorage
-      window.dispatchEvent(new CustomEvent('rightSideSettings'));
-      await this.props.showSnack('Right side settings saved', {
-        timeout: 1500,
-        actions: ['dismiss'],
-      });
-      return;
-    }
+    const sideSettings = JSON.stringify({
+      encodedSettings: this.state.sides[index].encodedSettings,
+      latestSettings: this.state.sides[index].latestSettings,
+    });
+    localStorage.setItem(sideKey, sideSettings);
+    // Firing an event when we save side settings in localstorage
+    globalThis.dispatchEvent(new CustomEvent(sideKey));
+    await this.props.showSnack(message, {
+      timeout: 1500,
+      actions: ['dismiss'],
+    });
   };
 
   /**
    * This function sets the side state with catched localstorage
    * value as per side index provided
    * @param index : (0|1)
-   * @returns
    */
-  private onImportSideSettingsClick = async (index: 0 | 1) => {
-    const leftSideSettingsString = localStorage.getItem('leftSideSettings');
-    const rightSideSettingsString = localStorage.getItem('rightSideSettings');
+  private readonly onImportSideSettingsClick = async (index: 0 | 1) => {
+    const isLeftSide = index === 0;
+    const sideKey = isLeftSide ? 'leftSideSettings' : 'rightSideSettings';
+    const message = isLeftSide ? 'Left side settings imported' : 'Right side settings imported';
+    const sideSettingsString = localStorage.getItem(sideKey);
 
-    if (index === 0 && leftSideSettingsString) {
-      const oldLeftSideSettings = this.state.sides[index];
-      const newLeftSideSettings = {
-        ...this.state.sides[index],
-        ...JSON.parse(leftSideSettingsString),
-      };
-      this.setState({
-        sides: cleanSet(this.state.sides, index, newLeftSideSettings),
-      });
-      const result = await this.props.showSnack('Left side settings imported', {
-        timeout: 3000,
-        actions: ['undo', 'dismiss'],
-      });
-      if (result === 'undo') {
-        this.setState({
-          sides: cleanSet(this.state.sides, index, oldLeftSideSettings),
-        });
-      }
-      return;
-    }
+    if (!sideSettingsString) return;
 
-    if (index === 1 && rightSideSettingsString) {
-      const oldRightSideSettings = this.state.sides[index];
-      const newRightSideSettings = {
-        ...this.state.sides[index],
-        ...JSON.parse(rightSideSettingsString),
-      };
+    const oldSideSettings = this.state.sides[index];
+    const newSideSettings = {
+      ...this.state.sides[index],
+      ...JSON.parse(sideSettingsString),
+    };
+    this.setState({
+      sides: cleanSet(this.state.sides, index, newSideSettings),
+    });
+    const result = await this.props.showSnack(message, {
+      timeout: 3000,
+      actions: ['undo', 'dismiss'],
+    });
+    if (result === 'undo') {
       this.setState({
-        sides: cleanSet(this.state.sides, index, newRightSideSettings),
+        sides: cleanSet(this.state.sides, index, oldSideSettings),
       });
-      const result = await this.props.showSnack(
-        'Right side settings imported',
-        {
-          timeout: 3000,
-          actions: ['undo', 'dismiss'],
-        },
-      );
-      if (result === 'undo') {
-        this.setState({
-          sides: cleanSet(this.state.sides, index, oldRightSideSettings),
-        });
-      }
-      return;
     }
   };
 
-  private onPreprocessorChange = async (
+  private readonly onPreprocessorChange = async (
     preprocessorState: PreprocessorState,
   ): Promise<void> => {
     const source = this.state.source;
@@ -550,9 +524,8 @@ export default class Compress extends Component<Props, State> {
       loading: true,
       preprocessorState,
       // Flip resize values if orientation has changed
-      sides: !orientationChanged
-        ? state.sides
-        : (state.sides.map((side) => {
+      sides: orientationChanged
+        ? (state.sides.map((side) => {
             const currentResizeSettings =
               side.latestSettings.processorState.resize;
             const resizeSettings: Partial<ProcessorState['resize']> = {
@@ -564,7 +537,8 @@ export default class Compress extends Component<Props, State> {
               'latestSettings.processorState.resize',
               resizeSettings,
             );
-          }) as [Side, Side]),
+          }) as [Side, Side])
+        : state.sides,
     }));
   };
 
@@ -580,9 +554,9 @@ export default class Compress extends Component<Props, State> {
     clearTimeout(this.updateImageTimeout);
     if (immediate) {
       this.updateImage();
-    } else {
-      this.updateImageTimeout = setTimeout(() => this.updateImage(), delay);
+      return;
     }
+    this.updateImageTimeout = globalThis.setTimeout(() => this.updateImage(), delay);
   }
 
   private sourceFile: File;
@@ -603,16 +577,14 @@ export default class Compress extends Component<Props, State> {
 
     // State of the last completed job, or ongoing job
     const latestMainJobState: Partial<MainJob> = this.activeMainJob || {
-      file: currentState.source && currentState.source.file,
+      file: currentState.source?.file,
       preprocessorState: currentState.encodedPreprocessorState,
     };
     const latestSideJobStates: Partial<SideJob>[] = currentState.sides.map(
       (side, i) =>
         this.activeSideJobs[i] || {
-          processorState:
-            side.encodedSettings && side.encodedSettings.processorState,
-          encoderState:
-            side.encodedSettings && side.encodedSettings.encoderState,
+          processorState: side.encodedSettings?.processorState,
+          encoderState: side.encodedSettings?.encoderState,
         },
     );
 
@@ -630,7 +602,7 @@ export default class Compress extends Component<Props, State> {
     }));
 
     // Figure out what needs doing:
-    const needsDecoding = latestMainJobState.file != mainJobState.file;
+    const needsDecoding = latestMainJobState.file !== mainJobState.file;
     const needsPreprocessing =
       needsDecoding ||
       latestMainJobState.preprocessorState !== mainJobState.preprocessorState;
@@ -728,7 +700,8 @@ export default class Compress extends Component<Props, State> {
         throw err;
       }
     } else {
-      ({ decoded, vectorImage } = currentState.source!);
+      decoded = currentState.source.decoded;
+      vectorImage = currentState.source.vectorImage;
     }
 
     let source: SourceImage;
@@ -787,7 +760,7 @@ export default class Compress extends Component<Props, State> {
         throw err;
       }
     } else {
-      source = currentState.source!;
+      source = currentState.source;
     }
 
     // That's the main part of the job done.
@@ -806,12 +779,8 @@ export default class Compress extends Component<Props, State> {
         let data: ImageData;
         let processed: ImageData | undefined = undefined;
 
-        // If there's no encoder state, this is "original image", which also
-        // doesn't allow processing.
-        if (!jobState.encoderState) {
-          file = source.file;
-          data = source.preprocessed;
-        } else {
+        // If there's an encoder state, process and encode the image
+        if (jobState.encoderState) {
           const cacheResult = this.encodeCache.match(
             source.preprocessed,
             jobState.processorState,
@@ -856,7 +825,7 @@ export default class Compress extends Component<Props, State> {
                 return { sides };
               });
             } else {
-              processed = currentState.sides[sideIndex].processed!;
+              processed = currentState.sides[sideIndex].processed;
             }
 
             file = await compressImage(
@@ -877,6 +846,10 @@ export default class Compress extends Component<Props, State> {
               processorState: jobState.processorState,
             });
           }
+        } else {
+          // No encoder state means "original image" - no processing allowed
+          file = source.file;
+          data = source.preprocessed;
         }
 
         this.setState((currentState) => {
@@ -941,20 +914,25 @@ export default class Compress extends Component<Props, State> {
       />
     ));
 
-    const results = sides.map((side, index) => (
-      <Results
-        downloadUrl={side.downloadUrl}
-        imageFile={side.file}
-        source={source}
-        loading={loading || side.loading}
-        flipSide={mobileView || index === 1}
-        typeLabel={
-          side.latestSettings.encoderState
-            ? encoderMap[side.latestSettings.encoderState.type].meta.label
-            : `${side.file ? `${side.file.name}` : 'Original Image'}`
+    const results = sides.map((side, index) => {
+      const getTypeLabel = (): string => {
+        if (side.latestSettings.encoderState) {
+          return encoderMap[side.latestSettings.encoderState.type].meta.label;
         }
-      />
-    ));
+        return side.file ? side.file.name : 'Original Image';
+      };
+
+      return (
+        <Results
+          downloadUrl={side.downloadUrl}
+          imageFile={side.file}
+          source={source}
+          loading={loading || side.loading}
+          flipSide={mobileView || index === 1}
+          typeLabel={getTypeLabel()}
+        />
+      );
+    });
 
     // For rendering, we ideally want the settings that were used to create the
     // data, not the latest settings.
@@ -962,12 +940,15 @@ export default class Compress extends Component<Props, State> {
       leftSide.encodedSettings || leftSide.latestSettings;
     const rightDisplaySettings =
       rightSide.encodedSettings || rightSide.latestSettings;
-    const leftImgContain =
-      leftDisplaySettings.processorState.resize.enabled &&
-      leftDisplaySettings.processorState.resize.fitMethod === 'contain';
-    const rightImgContain =
-      rightDisplaySettings.processorState.resize.enabled &&
-      rightDisplaySettings.processorState.resize.fitMethod === 'contain';
+    const isContainFitMethod = (settings: SideSettings): boolean => {
+      return (
+        settings.processorState.resize.enabled &&
+        settings.processorState.resize.fitMethod === 'contain'
+      );
+    };
+
+    const leftImgContain = isContainFitMethod(leftDisplaySettings);
+    const rightImgContain = isContainFitMethod(rightDisplaySettings);
 
     return (
       <div class={style.compress}>

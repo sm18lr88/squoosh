@@ -2,7 +2,14 @@ import { h, Component } from 'preact';
 import * as style from './style.css';
 import 'add-css:./style.css';
 
-interface Props extends preact.JSX.HTMLAttributes {}
+interface Props extends Omit<
+  preact.JSX.HTMLAttributes<HTMLInputElement>,
+  'checked' | 'name' | 'onChange'
+> {
+  checked?: boolean;
+  name?: string;
+  onChange?: (event: Event) => void;
+}
 interface State {}
 
 export default class Toggle extends Component<Props, State> {

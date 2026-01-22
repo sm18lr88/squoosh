@@ -13,10 +13,10 @@
 import type { WebPModule } from 'codecs/webp/dec/webp_dec';
 import { initEmscriptenModule, blobToArrayBuffer } from 'features/worker-utils';
 
-let emscriptenModule: Promise<WebPModule>;
+let emscriptenModule: Promise<WebPModule> | undefined;
 
 export default async function decode(blob: Blob): Promise<ImageData> {
-  if (!emscriptenModule) {
+  if (emscriptenModule === undefined) {
     const decoder = await import('codecs/webp/dec/webp_dec');
     emscriptenModule = initEmscriptenModule(decoder.default);
   }

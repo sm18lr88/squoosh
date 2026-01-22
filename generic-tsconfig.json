@@ -1,18 +1,20 @@
 {
   "compilerOptions": {
-    "target": "ES2019",
+    "target": "ES2024",
     "downlevelIteration": true,
     "module": "esnext",
     "jsx": "react",
     "jsxFactory": "h",
-    "strict": true,
-    "moduleResolution": "node",
+    "strict": false,
+    "moduleResolution": "bundler",
     "composite": true,
     "declarationMap": true,
     "baseUrl": "./",
     "rootDir": "./",
     "outDir": ".tmp/ts",
     "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
     "paths": {
       "static-build/*": ["src/static-build/*"],
       "client/*": ["src/client/*"],

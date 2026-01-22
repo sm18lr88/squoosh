@@ -1,7 +1,7 @@
 /** Replace the contents of a canvas with the given data */
 export function drawDataToCanvas(canvas: HTMLCanvasElement, data: ImageData) {
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw Error('Canvas not initialized');
+  if (!ctx) throw new Error('Canvas not initialized');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.putImageData(data, 0, 0);
 }
@@ -22,7 +22,7 @@ export async function canvasEncode(
   canvas.width = data.width;
   canvas.height = data.height;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw Error('Canvas not initialized');
+  if (!ctx) throw new Error('Canvas not initialized');
   ctx.putImageData(data, 0, 0);
 
   let blob: Blob | null;
@@ -37,20 +37,20 @@ export async function canvasEncode(
     const dataUrl = (canvas as HTMLCanvasElement).toDataURL(type, quality);
     const result = /data:([^;]+);base64,(.*)$/.exec(dataUrl);
 
-    if (!result) throw Error('Data URL reading failed');
+    if (!result) throw new Error('Data URL reading failed');
 
     const outputType = result[1];
     const binaryStr = atob(result[2]);
     const data = new Uint8Array(binaryStr.length);
 
     for (let i = 0; i < data.length; i += 1) {
-      data[i] = binaryStr.charCodeAt(i);
+      data[i] = binaryStr.codePointAt(i) ?? 0;
     }
 
     blob = new Blob([data], { type: outputType });
   }
 
-  if (!blob) throw Error('Encoding failed');
+  if (!blob) throw new Error('Encoding failed');
   return blob;
 }
 
@@ -89,16 +89,21 @@ export function drawableToImageData(
 
 export type BuiltinResizeMethod = 'pixelated' | 'low' | 'medium' | 'high';
 
+interface BuiltinResizeOptions {
+  sx: number;
+  sy: number;
+  sw: number;
+  sh: number;
+  dw: number;
+  dh: number;
+  method: BuiltinResizeMethod;
+}
+
 export function builtinResize(
   data: ImageData,
-  sx: number,
-  sy: number,
-  sw: number,
-  sh: number,
-  dw: number,
-  dh: number,
-  method: BuiltinResizeMethod,
+  options: BuiltinResizeOptions,
 ): ImageData {
+  const { sx, sy, sw, sh, dw, dh, method } = options;
   const canvasSource = document.createElement('canvas');
   canvasSource.width = data.width;
   canvasSource.height = data.height;
@@ -130,7 +135,7 @@ export async function canvasEncodeTest(mimeType: string): Promise<boolean> {
     if (!blob) return false;
     // …but Safari & Firefox fall back to PNG, so we need to check the mime type.
     return blob.type === mimeType;
-  } catch (err) {
+  } catch {
     return false;
   }
 }

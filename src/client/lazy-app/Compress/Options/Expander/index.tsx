@@ -1,4 +1,4 @@
-import { h, Component, ComponentChild, ComponentChildren } from 'preact';
+import { h, Component, ComponentChildren } from 'preact';
 import * as style from './style.css';
 import 'add-css:./style.css';
 import { transitionHeight } from '../../../util';
@@ -27,7 +27,7 @@ export default class Expander extends Component<Props, State> {
     return null;
   }
 
-  async componentDidUpdate(_: Props, previousState: State) {
+  async componentDidUpdate(_prevProps: Props, previousState: State) {
     let heightFrom: number;
     let heightTo: number;
 
@@ -56,7 +56,7 @@ export default class Expander extends Component<Props, State> {
     this.setState({ outgoingChildren: undefined });
   }
 
-  render({}: Props, { children, outgoingChildren }: State) {
+  render(_props: Props, { children, outgoingChildren }: State) {
     return (
       <div class={outgoingChildren ? style.childrenExiting : ''}>
         {outgoingChildren || children}

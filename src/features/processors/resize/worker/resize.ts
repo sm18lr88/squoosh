@@ -53,14 +53,14 @@ const resizeMethods: WorkerResizeOptions['method'][] = [
   'lanczos3',
 ];
 
-let resizeWasmReady: Promise<unknown>;
-let hqxWasmReady: Promise<unknown>;
+let resizeWasmReady: Promise<unknown> | undefined;
+let hqxWasmReady: Promise<unknown> | undefined;
 
 async function hqx(
   input: ImageData,
   opts: HqxResizeOptions,
 ): Promise<ImageData> {
-  if (!hqxWasmReady) {
+  if (hqxWasmReady === undefined) {
     hqxWasmReady = initHqxWasm();
   }
 
@@ -81,7 +81,7 @@ async function hqx(
   );
 
   return new ImageData(
-    new Uint8ClampedArray(result.buffer),
+    new Uint8ClampedArray(result.buffer as ArrayBuffer),
     input.width * factor,
     input.height * factor,
   );
@@ -93,7 +93,7 @@ export default async function resize(
 ): Promise<ImageData> {
   let input = data;
 
-  if (!resizeWasmReady) {
+  if (resizeWasmReady === undefined) {
     resizeWasmReady = initResizeWasm();
   }
 
@@ -133,7 +133,7 @@ export default async function resize(
   );
 
   return new ImageData(
-    new Uint8ClampedArray(result.buffer),
+    new Uint8ClampedArray(result.buffer as ArrayBuffer),
     opts.width,
     opts.height,
   );

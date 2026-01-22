@@ -30,7 +30,7 @@ export class Options extends Component<Props, State> {
     });
   }
 
-  onChange = (event: Event) => {
+  readonly onChange = (event: Event) => {
     const form = (event.currentTarget as HTMLInputElement).closest(
       'form',
     ) as HTMLFormElement;

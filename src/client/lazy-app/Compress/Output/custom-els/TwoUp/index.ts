@@ -69,19 +69,19 @@ export default class TwoUp extends HTMLElement {
     this._childrenChange();
 
     // prettier-ignore
-    this._handle.innerHTML =
-      `<div class="${styles.scrubber}">${
-        `<svg viewBox="0 0 27 20">${
-          `<path class="${styles.arrowLeft}" d="M9.6 0L0 9.6l9.6 9.6z"/>` +
-          `<path class="${styles.arrowRight}" d="M17 19.2l9.5-9.6L16.9 0z"/>`
-        }</svg>
-      `}</div>`;
+    const arrowLeftPath = `<path class="${styles.arrowLeft}" d="M9.6 0L0 9.6l9.6 9.6z"/>`;
+    // prettier-ignore
+    const arrowRightPath = `<path class="${styles.arrowRight}" d="M17 19.2l9.5-9.6L16.9 0z"/>`;
+    // prettier-ignore
+    const svgContent = `<svg viewBox="0 0 27 20">${arrowLeftPath}${arrowRightPath}</svg>`;
+    // prettier-ignore
+    this._handle.innerHTML = `<div class="${styles.scrubber}">${svgContent}</div>`;
 
     // Watch for element size changes.
     this._resizeObserver = new ResizeObserver(() => this._resetPosition());
     this._resizeObserver.observe(this);
 
-    window.addEventListener('keydown', this._onKeyDown);
+    globalThis.addEventListener('keydown', this._onKeyDown);
 
     if (!this._everConnected) {
       this._resetPosition();
@@ -90,7 +90,7 @@ export default class TwoUp extends HTMLElement {
   }
 
   disconnectedCallback() {
-    window.removeEventListener('keydown', this._onKeyDown);
+    globalThis.removeEventListener('keydown', this._onKeyDown);
     if (this._resizeObserver) this._resizeObserver.disconnect();
   }
 
@@ -101,7 +101,7 @@ export default class TwoUp extends HTMLElement {
   }
 
   // KeyDown event handler
-  private _onKeyDown = (event: KeyboardEvent) => {
+  private readonly _onKeyDown = (event: KeyboardEvent) => {
     const target = event.target;
     if (target instanceof HTMLElement && target.closest('input')) return;
 
@@ -147,12 +147,12 @@ export default class TwoUp extends HTMLElement {
     return this.hasAttribute(legacyClipCompatAttr);
   }
 
-  set legacyClipCompat(val: boolean) {
-    if (val) {
-      this.setAttribute(legacyClipCompatAttr, '');
-    } else {
-      this.removeAttribute(legacyClipCompatAttr);
-    }
+  enableLegacyClipCompat() {
+    this.setAttribute(legacyClipCompatAttr, '');
+  }
+
+  disableLegacyClipCompat() {
+    this.removeAttribute(legacyClipCompatAttr);
   }
 
   /**
@@ -167,8 +167,12 @@ export default class TwoUp extends HTMLElement {
     return 'horizontal';
   }
 
-  set orientation(val: TwoUpOrientation) {
-    this.setAttribute(orientationAttr, val);
+  setOrientationVertical() {
+    this.setAttribute(orientationAttr, 'vertical');
+  }
+
+  setOrientationHorizontal() {
+    this.setAttribute(orientationAttr, 'horizontal');
   }
 
   /**

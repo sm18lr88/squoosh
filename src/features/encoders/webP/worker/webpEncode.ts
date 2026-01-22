@@ -16,7 +16,7 @@ import type { EncodeOptions } from '../shared/meta';
 import { initEmscriptenModule } from 'features/worker-utils';
 import { simd } from 'wasm-feature-detect';
 
-let emscriptenModule: Promise<WebPModule>;
+let emscriptenModule: Promise<WebPModule> | undefined;
 
 async function init() {
   if (await simd()) {
@@ -31,12 +31,12 @@ export default async function encode(
   data: ImageData,
   options: EncodeOptions,
 ): Promise<ArrayBuffer> {
-  if (!emscriptenModule) emscriptenModule = init();
+  if (emscriptenModule === undefined) emscriptenModule = init();
 
   const module = await emscriptenModule;
   const result = module.encode(data.data, data.width, data.height, options);
 
   if (!result) throw new Error('Encoding error.');
 
-  return result.buffer;
+  return result.buffer as ArrayBuffer;
 }

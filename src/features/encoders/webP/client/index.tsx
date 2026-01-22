@@ -69,7 +69,7 @@ export class Options extends Component<Props, State> {
     showAdvanced: false,
   };
 
-  onChange = (event: Event) => {
+  readonly onChange = (event: Event) => {
     const form = (event.currentTarget as HTMLInputElement).closest(
       'form',
     ) as HTMLFormElement;

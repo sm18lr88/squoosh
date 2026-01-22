@@ -26,7 +26,7 @@ function getPrecision(value: string): number {
 }
 
 class RangeInputElement extends HTMLElement {
-  private _input: HTMLInputElement;
+  private readonly _input: HTMLInputElement;
   private _valueDisplay?: HTMLSpanElement;
   private _ignoreChange = false;
 
@@ -51,11 +51,11 @@ class RangeInputElement extends HTMLElement {
         if (event.pointerId !== activePointer) return;
         activePointer = undefined;
         this._input.classList.remove(style.touchActive);
-        window.removeEventListener('pointerup', pointerUp);
-        window.removeEventListener('pointercancel', pointerUp);
+        globalThis.removeEventListener('pointerup', pointerUp);
+        globalThis.removeEventListener('pointercancel', pointerUp);
       };
-      window.addEventListener('pointerup', pointerUp);
-      window.addEventListener('pointercancel', pointerUp);
+      globalThis.addEventListener('pointerup', pointerUp);
+      globalThis.addEventListener('pointercancel', pointerUp);
     });
 
     for (const event of RETARGETED_EVENTS) {
@@ -78,7 +78,7 @@ class RangeInputElement extends HTMLElement {
     this.insertBefore(this._input, this.firstChild);
     this._valueDisplay = this.querySelector(
       '.' + style.valueDisplay + ' > span',
-    ) as HTMLSpanElement;
+    ) ?? undefined;
     // Set inline styles (this is useful when used with frameworks which might clear inline styles)
     this._update();
   }
@@ -106,7 +106,7 @@ class RangeInputElement extends HTMLElement {
     this._update();
   }
 
-  private _retargetEvent = (event: Event) => {
+  private readonly _retargetEvent = (event: Event) => {
     event.stopImmediatePropagation();
     const retargetted = new Event(event.type, event);
     this.dispatchEvent(retargetted);
@@ -122,7 +122,7 @@ class RangeInputElement extends HTMLElement {
       : Math.round(value).toString();
   }
 
-  private _update = () => {
+  private readonly _update = () => {
     // Not connected?
     if (!this._valueDisplay) return;
     const value = Number(this.value) || 0;
@@ -131,7 +131,7 @@ class RangeInputElement extends HTMLElement {
     const percent = (100 * (value - min)) / (max - min);
     const displayValue = this._getDisplayValue(value);
 
-    this._valueDisplay!.textContent = displayValue;
+    this._valueDisplay.textContent = displayValue;
     this.style.setProperty('--value-percent', percent + '%');
     this.style.setProperty('--value-width', '' + displayValue.length);
   };
@@ -139,13 +139,11 @@ class RangeInputElement extends HTMLElement {
   private _reflectAttributes() {
     this._ignoreChange = true;
     for (const attributeName of REFLECTED_ATTRIBUTES) {
-      if (this._input.hasAttribute(attributeName)) {
-        this.setAttribute(
-          attributeName,
-          this._input.getAttribute(attributeName)!,
-        );
-      } else {
+      const attrValue = this._input.getAttribute(attributeName);
+      if (attrValue === null) {
         this.removeAttribute(attributeName);
+      } else {
+        this.setAttribute(attributeName, attrValue);
       }
     }
     this._ignoreChange = false;

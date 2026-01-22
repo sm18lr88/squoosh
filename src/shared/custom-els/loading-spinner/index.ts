@@ -17,7 +17,7 @@ const HTMLEl = (__PRERENDER__
  *          appearing on the screen for short operations. Default: 300ms.
  */
 export default class LoadingSpinner extends HTMLEl {
-  private _delayTimeout: number = 0;
+  private _delayTimeout: ReturnType<typeof setTimeout> | undefined;
 
   disconnectedCallback() {
     this.style.display = 'none';
@@ -43,7 +43,7 @@ export default class LoadingSpinner extends HTMLEl {
       '</div>';
 
     const delayStr = getComputedStyle(this).getPropertyValue('--delay').trim();
-    let delayNum = parseFloat(delayStr);
+    let delayNum = Number.parseFloat(delayStr);
 
     // If seconds…
     if (/\ds$/.test(delayStr)) {
@@ -51,9 +51,9 @@ export default class LoadingSpinner extends HTMLEl {
       delayNum *= 1000;
     }
 
-    this._delayTimeout = self.setTimeout(() => {
+    this._delayTimeout = globalThis.setTimeout(() => {
       this.style.display = '';
-    }, delayNum);
+    }, delayNum) as unknown as ReturnType<typeof setTimeout>;
   }
 }
 

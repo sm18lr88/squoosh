@@ -41,7 +41,7 @@ export interface ScaleToOpts extends ChangeOptions {
 
 function getDistance(a: Point, b?: Point): number {
   if (!b) return 0;
-  return Math.sqrt((b.clientX - a.clientX) ** 2 + (b.clientY - a.clientY) ** 2);
+  return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
 }
 
 function getMidpoint(a: Point, b?: Point): Point {
@@ -56,10 +56,10 @@ function getMidpoint(a: Point, b?: Point): Point {
 function getAbsoluteValue(value: string | number, max: number): number {
   if (typeof value === 'number') return value;
 
-  if (value.trimRight().endsWith('%')) {
-    return (max * parseFloat(value)) / 100;
+  if (value.trimEnd().endsWith('%')) {
+    return (max * Number.parseFloat(value)) / 100;
   }
-  return parseFloat(value);
+  return Number.parseFloat(value);
 }
 
 // I'd rather use DOMMatrix/DOMPoint here, but the browser support isn't good enough.
@@ -90,7 +90,7 @@ export default class PinchZoom extends HTMLElement {
   // support yet.
   private _positioningEl?: Element;
   // Current transform.
-  private _transform: SVGMatrix = createMatrix();
+  private readonly _transform: SVGMatrix = createMatrix();
 
   constructor() {
     super();

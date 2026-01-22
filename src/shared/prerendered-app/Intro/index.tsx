@@ -58,7 +58,7 @@ const blobAnimImport =
     : import('./blob-anim');
 const installButtonSource = 'introInstallButton-Purple';
 const supportsClipboardAPI =
-  !__PRERENDER__ && navigator.clipboard && navigator.clipboard.read;
+  !__PRERENDER__ && navigator.clipboard?.read;
 
 async function getImageClipboardItem(
   items: ClipboardItem[],
@@ -71,6 +71,7 @@ async function getImageClipboardItem(
 
 interface Props {
   onFile?: (file: File) => void;
+  onFiles?: (files: File[]) => void;
   showSnack?: SnackBarElement['showSnackbar'];
 }
 interface State {
@@ -83,82 +84,85 @@ export default class Intro extends Component<Props, State> {
   state: State = {
     showBlobSVG: true,
   };
-  private fileInput?: HTMLInputElement;
-  private blobCanvas?: HTMLCanvasElement;
+  private readonly fileInput?: HTMLInputElement;
+  private readonly blobCanvas?: HTMLCanvasElement;
   private installingViaButton = false;
 
   componentDidMount() {
     // Listen for beforeinstallprompt events, indicating Squoosh is installable.
-    window.addEventListener(
+    globalThis.addEventListener(
       'beforeinstallprompt',
       this.onBeforeInstallPromptEvent,
     );
 
     // Listen for the appinstalled event, indicating Squoosh has been installed.
-    window.addEventListener('appinstalled', this.onAppInstalled);
+    globalThis.addEventListener('appinstalled', this.onAppInstalled);
 
-    if (blobAnimImport) {
+    if (blobAnimImport !== undefined) {
       blobAnimImport.then((module) => {
         this.setState(
           {
             showBlobSVG: false,
           },
-          () => module.startBlobAnim(this.blobCanvas!),
+          () => {
+            if (this.blobCanvas) module.startBlobAnim(this.blobCanvas);
+          },
         );
       });
     }
   }
 
   componentWillUnmount() {
-    window.removeEventListener(
+    globalThis.removeEventListener(
       'beforeinstallprompt',
       this.onBeforeInstallPromptEvent,
     );
-    window.removeEventListener('appinstalled', this.onAppInstalled);
+    globalThis.removeEventListener('appinstalled', this.onAppInstalled);
   }
 
-  private onFileChange = (event: Event): void => {
+  private readonly onFileChange = (event: Event): void => {
     const fileInput = event.target as HTMLInputElement;
-    const file = fileInput.files && fileInput.files[0];
-    if (!file) return;
-    this.fileInput!.value = '';
-    this.props.onFile!(file);
+    const files = fileInput.files;
+    if (!files || files.length === 0) return;
+    if (this.fileInput) this.fileInput.value = '';
+
+    if (files.length === 1) {
+      this.props.onFile?.(files[0]);
+    } else if (this.props.onFiles) {
+      this.props.onFiles(Array.from(files));
+    } else {
+      // Fallback to single file if onFiles not provided
+      this.props.onFile?.(files[0]);
+    }
   };
 
-  private onOpenClick = () => {
-    this.fileInput!.click();
+  private readonly onOpenClick = () => {
+    this.fileInput?.click();
   };
 
-  private onDemoClick = async (index: number, event: Event) => {
+  private readonly onDemoClick = async (index: number) => {
     try {
       this.setState({ fetchingDemoIndex: index });
       const demo = demos[index];
       const blob = await fetch(demo.url).then((r) => r.blob());
       const file = new File([blob], demo.filename, { type: blob.type });
-      this.props.onFile!(file);
+      this.props.onFile?.(file);
     } catch (err) {
+      console.error('Failed to fetch demo image:', err);
       this.setState({ fetchingDemoIndex: undefined });
-      this.props.showSnack!("Couldn't fetch demo image");
+      this.props.showSnack?.("Couldn't fetch demo image");
     }
   };
 
-  private onBeforeInstallPromptEvent = (event: BeforeInstallPromptEvent) => {
+  private readonly onBeforeInstallPromptEvent = (event: BeforeInstallPromptEvent) => {
     // Don't show the mini-infobar on mobile
     event.preventDefault();
 
     // Save the beforeinstallprompt event so it can be called later.
     this.setState({ beforeInstallEvent: event });
-
-    // Log the event.
-    const gaEventInfo = {
-      eventCategory: 'pwa-install',
-      eventAction: 'promo-shown',
-      nonInteraction: true,
-    };
-    ga('send', 'event', gaEventInfo);
   };
 
-  private onInstallClick = async (event: Event) => {
+  private readonly onInstallClick = async () => {
     // Get the deferred beforeinstallprompt event
     const beforeInstallEvent = this.state.beforeInstallEvent;
     // If there's no deferred prompt, bail.
@@ -171,14 +175,6 @@ export default class Intro extends Component<Props, State> {
 
     // Wait for the user to accept or dismiss the install prompt
     const { outcome } = await beforeInstallEvent.userChoice;
-    // Send the analytics data
-    const gaEventInfo = {
-      eventCategory: 'pwa-install',
-      eventAction: 'promo-clicked',
-      eventLabel: installButtonSource,
-      eventValue: outcome === 'accepted' ? 1 : 0,
-    };
-    ga('send', 'event', gaEventInfo);
 
     // If the prompt was dismissed, we aren't going to install via the button.
     if (outcome === 'dismissed') {
@@ -186,43 +182,37 @@ export default class Intro extends Component<Props, State> {
     }
   };
 
-  private onAppInstalled = () => {
+  private readonly onAppInstalled = () => {
     // We don't need the install button, if it's shown
     this.setState({ beforeInstallEvent: undefined });
-
-    // Don't log analytics if page is not visible
-    if (document.hidden) return;
-
-    // Try to get the install, if it's not set, use 'browser'
-    const source = this.installingViaButton ? installButtonSource : 'browser';
-    ga('send', 'event', 'pwa-install', 'installed', source);
 
     // Clear the install method property
     this.installingViaButton = false;
   };
 
-  private onPasteClick = async () => {
+  private readonly onPasteClick = async () => {
     let clipboardItems: ClipboardItem[];
 
     try {
       clipboardItems = await navigator.clipboard.read();
     } catch (err) {
-      this.props.showSnack!(`No permission to access clipboard`);
+      console.error('Failed to read clipboard:', err);
+      this.props.showSnack?.(`No permission to access clipboard`);
       return;
     }
 
     const blob = await getImageClipboardItem(clipboardItems);
 
     if (!blob) {
-      this.props.showSnack!(`No image found in the clipboard`);
+      this.props.showSnack?.(`No image found in the clipboard`);
       return;
     }
 
-    this.props.onFile!(new File([blob], 'image.unknown'));
+    this.props.onFile?.(new File([blob], 'image.unknown'));
   };
 
   render(
-    {}: Props,
+    _props: Props,
     { fetchingDemoIndex, beforeInstallEvent, showBlobSVG }: State,
   ) {
     return (
@@ -231,6 +221,8 @@ export default class Intro extends Component<Props, State> {
           class={style.hide}
           ref={linkRef(this, 'fileInput')}
           type="file"
+          multiple
+          accept="image/*"
           onChange={this.onFileChange}
         />
         <div class={style.main}>
@@ -256,23 +248,22 @@ export default class Intro extends Component<Props, State> {
                 viewBox="-1.25 -1.25 2.5 2.5"
                 preserveAspectRatio="xMidYMid slice"
               >
-                {startBlobs.map((points) => (
-                  <path
-                    d={points
-                      .map((point, i) => {
-                        const nextI = i === points.length - 1 ? 0 : i + 1;
-                        let d = '';
-                        if (i === 0) {
-                          d += `M${point[2]} ${point[3]}`;
-                        }
-                        return (
-                          d +
-                          `C${point[4]} ${point[5]} ${points[nextI][0]} ${points[nextI][1]} ${points[nextI][2]} ${points[nextI][3]}`
-                        );
-                      })
-                      .join('')}
-                  />
-                ))}
+                {startBlobs.map((points) => {
+                  const pathData = points
+                    .map((point, i) => {
+                      const nextI = i === points.length - 1 ? 0 : i + 1;
+                      let d = '';
+                      if (i === 0) {
+                        d += `M${point[2]} ${point[3]}`;
+                      }
+                      return (
+                        d +
+                        `C${point[4]} ${point[5]} ${points[nextI][0]} ${points[nextI][1]} ${points[nextI][2]} ${points[nextI][3]}`
+                      );
+                    })
+                    .join('');
+                  return <path key={pathData} d={pathData} />;
+                })}
               </svg>
             )}
             <div
@@ -314,10 +305,10 @@ export default class Intro extends Component<Props, State> {
             </p>
             <ul class={style.demos}>
               {demos.map((demo, i) => (
-                <li>
+                <li key={demo.filename}>
                   <button
                     class="unbutton"
-                    onClick={(event) => this.onDemoClick(i, event)}
+                    onClick={() => this.onDemoClick(i)}
                   >
                     <div class={style.demoContainer}>
                       <div class={style.demoIconContainer}>
@@ -365,7 +356,7 @@ export default class Intro extends Component<Props, State> {
                   <img
                     class={style.infoImg}
                     src={smallSectionAsset}
-                    alt="silhouette of a large 1.4 megabyte image shrunk into a smaller 80 kilobyte image"
+                    alt="silhouette of a large 1.4 megabyte file shrunk into a smaller 80 kilobyte file"
                     width="536"
                     height="522"
                   />
@@ -446,7 +437,7 @@ export default class Intro extends Component<Props, State> {
                   class={style.footerLinkWithLogo}
                   href="https://github.com/GoogleChromeLabs/squoosh"
                 >
-                  <img src={githubLogo} alt="" width="10" height="10" />
+                  <img src={githubLogo} alt="" width="10" height="10" />{' '}
                   Source on Github
                 </a>
               </footer>

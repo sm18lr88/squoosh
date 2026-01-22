@@ -29,7 +29,7 @@ function createSnack(
   el.appendChild(text);
 
   const result = new Promise<string>((resolve) => {
-    let timeoutId: number;
+    let timeoutId: ReturnType<typeof setTimeout>;
 
     // Add action buttons
     for (const action of actions) {
@@ -45,7 +45,7 @@ function createSnack(
 
     // Add timeout
     if (timeout) {
-      timeoutId = self.setTimeout(() => resolve(''), timeout);
+      timeoutId = globalThis.setTimeout(() => resolve(''), timeout);
     }
   });
 
@@ -53,7 +53,7 @@ function createSnack(
 }
 
 export default class SnackBarElement extends HTMLEl {
-  private _snackbars: [
+  private readonly _snackbars: [
     string,
     SnackOptions,
     (action: Promise<string>) => void,

@@ -2,10 +2,19 @@ import { h, Component } from 'preact';
 import * as style from './style.css';
 import 'add-css:./style.css';
 import RangeInputElement from './custom-els/RangeInput';
-import './custom-els/RangeInput';
 import { linkRef } from 'shared/prerendered-app/util';
 
-interface Props extends preact.JSX.HTMLAttributes {}
+interface Props extends Omit<
+  preact.JSX.HTMLAttributes<HTMLInputElement>,
+  'value' | 'min' | 'max' | 'step' | 'name' | 'onInput'
+> {
+  value?: number | string;
+  min?: number | string;
+  max?: number | string;
+  step?: number | string;
+  name?: string;
+  onInput?: (event: Event) => void;
+}
 interface State {
   textFocused: boolean;
 }
@@ -14,23 +23,25 @@ export default class Range extends Component<Props, State> {
   rangeWc?: RangeInputElement;
   inputEl?: HTMLInputElement;
 
-  private onTextInput = (event: Event) => {
+  private readonly onTextInput = (event: Event) => {
     const input = event.target as HTMLInputElement;
     const value = input.value.trim();
     if (!value) return;
-    this.rangeWc!.value = input.value;
-    this.rangeWc!.dispatchEvent(
-      new InputEvent('input', {
-        bubbles: event.bubbles,
-      }),
-    );
+    if (this.rangeWc) {
+      this.rangeWc.value = input.value;
+      this.rangeWc.dispatchEvent(
+        new InputEvent('input', {
+          bubbles: event.bubbles,
+        }),
+      );
+    }
   };
 
-  private onTextFocus = () => {
+  private readonly onTextFocus = () => {
     this.setState({ textFocused: true });
   };
 
-  private onTextBlur = () => {
+  private readonly onTextBlur = () => {
     this.setState({ textFocused: false });
   };
 
@@ -38,7 +49,7 @@ export default class Range extends Component<Props, State> {
     const { children, ...otherProps } = props;
 
     const { value, min, max, step } = props;
-    const textValue = state.textFocused ? this.inputEl!.value : value;
+    const textValue = state.textFocused && this.inputEl ? this.inputEl.value : value;
 
     return (
       <label class={style.range}>

@@ -14,13 +14,13 @@ import mozjpeg_enc, { MozJPEGModule } from 'codecs/mozjpeg/enc/mozjpeg_enc';
 import { EncodeOptions } from '../shared/meta';
 import { initEmscriptenModule } from 'features/worker-utils';
 
-let emscriptenModule: Promise<MozJPEGModule>;
+let emscriptenModule: Promise<MozJPEGModule> | undefined;
 
 export default async function encode(
   data: ImageData,
   options: EncodeOptions,
 ): Promise<ArrayBuffer> {
-  if (!emscriptenModule) {
+  if (emscriptenModule === undefined) {
     emscriptenModule = initEmscriptenModule(mozjpeg_enc);
   }
 

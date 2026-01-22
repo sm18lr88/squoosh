@@ -16,7 +16,7 @@ class WorkerBridge {
   /** Comlinked worker API. */
   protected _workerApi?: ProcessorWorkerApi;
   /** ID from setTimeout */
-  protected _workerTimeout?: number;
+  protected _workerTimeout?: ReturnType<typeof setTimeout>;
 
   protected _terminateWorker() {
     if (!this._worker) return;
@@ -58,9 +58,9 @@ for (const methodName of methodNames) {
           signal.removeEventListener('abort', onAbort);
 
           // Start a timer to clear up the worker.
-          this._workerTimeout = setTimeout(() => {
+          this._workerTimeout = globalThis.setTimeout(() => {
             this._terminateWorker();
-          }, workerTimeout);
+          }, workerTimeout) as unknown as ReturnType<typeof setTimeout>;
         });
       });
 

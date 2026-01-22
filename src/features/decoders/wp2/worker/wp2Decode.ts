@@ -13,10 +13,10 @@
 import wp2Decoder, { WP2Module } from 'codecs/wp2/dec/wp2_dec';
 import { initEmscriptenModule, blobToArrayBuffer } from 'features/worker-utils';
 
-let emscriptenModule: Promise<WP2Module>;
+let emscriptenModule: Promise<WP2Module> | undefined;
 
 export default async function decode(blob: Blob): Promise<ImageData> {
-  if (!emscriptenModule) {
+  if (emscriptenModule === undefined) {
     emscriptenModule = initEmscriptenModule(wp2Decoder);
   }
 

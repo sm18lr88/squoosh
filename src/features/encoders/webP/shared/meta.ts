@@ -10,9 +10,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+export type { EncodeOptions } from 'codecs/webp/enc/webp_enc';
 import type { EncodeOptions } from 'codecs/webp/enc/webp_enc';
-
-export { EncodeOptions };
 
 export const label = 'WebP';
 export const mimeType = 'image/webp';

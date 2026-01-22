@@ -10,9 +10,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+export type { EncodeOptions } from 'codecs/jxl/enc/jxl_enc';
 import type { EncodeOptions } from 'codecs/jxl/enc/jxl_enc';
-
-export { EncodeOptions };
 
 export const label = 'JPEG XL (beta)';
 export const mimeType = 'image/jxl';

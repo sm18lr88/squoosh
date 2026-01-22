@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "webp",
   "scripts": {
     "build": "../build-cpp.sh"

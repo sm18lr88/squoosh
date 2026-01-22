@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "squoosh-png",
   "collaborators": [
     "Surma <surma@surma.dev>"

@@ -66,12 +66,14 @@ export default class Output extends Component<Props, State> {
 
     // Reset the pinch zoom, which may have an position set from the previous view, after pressing
     // the back button.
-    this.pinchZoomLeft!.setTransform({
-      allowChangeEvent: true,
-      x: 0,
-      y: 0,
-      scale: 1,
-    });
+    if (this.pinchZoomLeft) {
+      this.pinchZoomLeft.setTransform({
+        allowChangeEvent: true,
+        x: 0,
+        y: 0,
+        scale: 1,
+      });
+    }
 
     if (this.canvasLeft && leftDraw) {
       drawDataToCanvas(this.canvasLeft, leftDraw);
@@ -94,35 +96,37 @@ export default class Output extends Component<Props, State> {
         prevProps.source &&
         this.props.source.file !== prevProps.source.file);
 
-    const oldSourceData = prevProps.source && prevProps.source.preprocessed;
-    const newSourceData = this.props.source && this.props.source.preprocessed;
-    const pinchZoom = this.pinchZoomLeft!;
+    const oldSourceData = prevProps.source?.preprocessed;
+    const newSourceData = this.props.source?.preprocessed;
+    const pinchZoom = this.pinchZoomLeft;
 
-    if (sourceFileChanged) {
-      // New image? Reset the pinch-zoom.
-      pinchZoom.setTransform({
-        allowChangeEvent: true,
-        x: 0,
-        y: 0,
-        scale: 1,
-      });
-    } else if (
-      oldSourceData &&
-      newSourceData &&
-      oldSourceData !== newSourceData
-    ) {
-      // Since the pinch zoom transform origin is the top-left of the content, we need to flip
-      // things around a bit when the content size changes, so the new content appears as if it were
-      // central to the previous content.
-      const scaleChange = 1 - pinchZoom.scale;
-      const oldXScaleOffset = (oldSourceData.width / 2) * scaleChange;
-      const oldYScaleOffset = (oldSourceData.height / 2) * scaleChange;
+    if (pinchZoom) {
+      if (sourceFileChanged) {
+        // New image? Reset the pinch-zoom.
+        pinchZoom.setTransform({
+          allowChangeEvent: true,
+          x: 0,
+          y: 0,
+          scale: 1,
+        });
+      } else if (
+        oldSourceData &&
+        newSourceData &&
+        oldSourceData !== newSourceData
+      ) {
+        // Since the pinch zoom transform origin is the top-left of the content, we need to flip
+        // things around a bit when the content size changes, so the new content appears as if it were
+        // central to the previous content.
+        const scaleChange = 1 - pinchZoom.scale;
+        const oldXScaleOffset = (oldSourceData.width / 2) * scaleChange;
+        const oldYScaleOffset = (oldSourceData.height / 2) * scaleChange;
 
-      pinchZoom.setTransform({
-        allowChangeEvent: true,
-        x: pinchZoom.x - oldXScaleOffset + oldYScaleOffset,
-        y: pinchZoom.y - oldYScaleOffset + oldXScaleOffset,
-      });
+        pinchZoom.setTransform({
+          allowChangeEvent: true,
+          x: pinchZoom.x - oldXScaleOffset + oldYScaleOffset,
+          y: pinchZoom.y - oldYScaleOffset + oldXScaleOffset,
+        });
+      }
     }
 
     if (leftDraw && leftDraw !== prevLeftDraw && this.canvasLeft) {
@@ -141,36 +145,36 @@ export default class Output extends Component<Props, State> {
   }
 
   private leftDrawable(props: Props = this.props): ImageData | undefined {
-    return props.leftCompressed || (props.source && props.source.preprocessed);
+    return props.leftCompressed || props.source?.preprocessed;
   }
 
   private rightDrawable(props: Props = this.props): ImageData | undefined {
-    return props.rightCompressed || (props.source && props.source.preprocessed);
+    return props.rightCompressed || props.source?.preprocessed;
   }
 
-  private toggleAliasing = () => {
+  private readonly toggleAliasing = () => {
     this.setState((state) => ({
       aliasing: !state.aliasing,
     }));
   };
 
-  private toggleBackground = () => {
+  private readonly toggleBackground = () => {
     this.setState({
       altBackground: !this.state.altBackground,
     });
   };
 
-  private zoomIn = () => {
-    if (!this.pinchZoomLeft) throw Error('Missing pinch-zoom element');
+  private readonly zoomIn = () => {
+    if (!this.pinchZoomLeft) throw new Error('Missing pinch-zoom element');
     this.pinchZoomLeft.scaleTo(this.state.scale * 1.25, scaleToOpts);
   };
 
-  private zoomOut = () => {
-    if (!this.pinchZoomLeft) throw Error('Missing pinch-zoom element');
+  private readonly zoomOut = () => {
+    if (!this.pinchZoomLeft) throw new Error('Missing pinch-zoom element');
     this.pinchZoomLeft.scaleTo(this.state.scale / 1.25, scaleToOpts);
   };
 
-  private onRotateClick = () => {
+  private readonly onRotateClick = () => {
     const { preprocessorState: inputProcessorState } = this.props;
     if (!inputProcessorState) return;
 
@@ -183,34 +187,35 @@ export default class Output extends Component<Props, State> {
     this.props.onPreprocessorChange(newState);
   };
 
-  private onScaleValueFocus = () => {
+  private readonly onScaleValueFocus = () => {
     this.setState({ editingScale: true }, () => {
       if (this.scaleInput) {
         // Firefox unfocuses the input straight away unless I force a style
         // calculation here. I have no idea why, but it's late and I'm quite
         // tired.
-        getComputedStyle(this.scaleInput).transform;
+        // Force a style calculation to prevent Firefox from unfocusing
+        void getComputedStyle(this.scaleInput).transform;
         this.scaleInput.focus();
       }
     });
   };
 
-  private onScaleInputBlur = () => {
+  private readonly onScaleInputBlur = () => {
     this.setState({ editingScale: false });
   };
 
-  private onScaleInputChanged = (event: Event) => {
+  private readonly onScaleInputChanged = (event: Event) => {
     const target = event.target as HTMLInputElement;
-    const percent = parseFloat(target.value);
-    if (isNaN(percent)) return;
-    if (!this.pinchZoomLeft) throw Error('Missing pinch-zoom element');
+    const percent = Number.parseFloat(target.value);
+    if (Number.isNaN(percent)) return;
+    if (!this.pinchZoomLeft) throw new Error('Missing pinch-zoom element');
 
     this.pinchZoomLeft.scaleTo(percent / 100, scaleToOpts);
   };
 
-  private onPinchZoomLeftChange = (event: Event) => {
+  private readonly onPinchZoomLeftChange = () => {
     if (!this.pinchZoomRight || !this.pinchZoomLeft) {
-      throw Error('Missing pinch-zoom element');
+      throw new Error('Missing pinch-zoom element');
     }
     this.setState({
       scale: this.pinchZoomLeft.scale,
@@ -230,9 +235,9 @@ export default class Output extends Component<Props, State> {
    *
    * @param event Event to redirect
    */
-  private onRetargetableEvent = (event: Event) => {
+  private readonly onRetargetableEvent = (event: Event) => {
     const targetEl = event.target as HTMLElement;
-    if (!this.pinchZoomLeft) throw Error('Missing pinch-zoom element');
+    if (!this.pinchZoomLeft) throw new Error('Missing pinch-zoom element');
     // If the event is on the handle of the two-up, let it through,
     // unless it's a wheel event, in which case always let it through.
     if (event.type !== 'wheel' && targetEl.closest(`.${twoUpHandle}`)) return;
@@ -269,7 +274,7 @@ export default class Output extends Component<Props, State> {
     const leftDraw = this.leftDrawable();
     const rightDraw = this.rightDrawable();
     // To keep position stable, the output is put in a square using the longest dimension.
-    const originalImage = source && source.preprocessed;
+    const originalImage = source?.preprocessed;
 
     return (
       <Fragment>
@@ -302,11 +307,11 @@ export default class Output extends Component<Props, State> {
                   aliasing ? style.pixelated : ''
                 }`}
                 ref={linkRef(this, 'canvasLeft')}
-                width={leftDraw && leftDraw.width}
-                height={leftDraw && leftDraw.height}
+                width={leftDraw?.width}
+                height={leftDraw?.height}
                 style={{
-                  width: originalImage ? originalImage.width : '',
-                  height: originalImage ? originalImage.height : '',
+                  width: originalImage?.width ?? '',
+                  height: originalImage?.height ?? '',
                   objectFit: leftImgContain ? 'contain' : '',
                 }}
               />
@@ -320,11 +325,11 @@ export default class Output extends Component<Props, State> {
                   aliasing ? style.pixelated : ''
                 }`}
                 ref={linkRef(this, 'canvasRight')}
-                width={rightDraw && rightDraw.width}
-                height={rightDraw && rightDraw.height}
+                width={rightDraw?.width}
+                height={rightDraw?.height}
                 style={{
-                  width: originalImage ? originalImage.width : '',
-                  height: originalImage ? originalImage.height : '',
+                  width: originalImage?.width ?? '',
+                  height: originalImage?.height ?? '',
                   objectFit: rightImgContain ? 'contain' : '',
                 }}
               />

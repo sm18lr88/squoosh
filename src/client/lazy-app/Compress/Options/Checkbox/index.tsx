@@ -3,7 +3,15 @@ import * as style from './style.css';
 import 'add-css:./style.css';
 import { UncheckedIcon, CheckedIcon } from '../../../icons';
 
-interface Props extends preact.JSX.HTMLAttributes {}
+interface Props extends Omit<
+  preact.JSX.HTMLAttributes<HTMLInputElement>,
+  'checked' | 'disabled' | 'name' | 'onChange'
+> {
+  checked?: boolean;
+  disabled?: boolean;
+  name?: string;
+  onChange?: (event: Event) => void;
+}
 interface State {}
 
 export default class Checkbox extends Component<Props, State> {

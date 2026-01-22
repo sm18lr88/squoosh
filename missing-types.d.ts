@@ -54,9 +54,52 @@ declare module 'service-worker:*' {
   export default url;
 }
 
-declare var ga: {
-  (...args: any[]): void;
-  q: any[];
-};
-
 declare const __PRODUCTION__: boolean;
+declare const __PRERENDER__: boolean;
+
+declare module 'linkstate' {
+  import { Component } from 'preact';
+  export default function linkState<S, K extends keyof S>(
+    component: Component<any, S>,
+    key: K,
+    eventPath?: string,
+  ): (event: Event) => void;
+}
+
+declare module 'pointer-tracker' {
+  export interface Pointer {
+    id: number;
+    nativePointer: Touch | PointerEvent | MouseEvent;
+    pageX: number;
+    pageY: number;
+    clientX: number;
+    clientY: number;
+    getCoalesced(): Pointer[];
+  }
+
+  export interface PointerTrackerCallbacks {
+    start?: (
+      pointer: Pointer,
+      event: TouchEvent | PointerEvent | MouseEvent,
+    ) => boolean;
+    move?: (
+      previousPointers: Pointer[],
+      currentPointers: Pointer[],
+      event: TouchEvent | PointerEvent | MouseEvent,
+    ) => void;
+    end?: (
+      pointer: Pointer,
+      event: TouchEvent | PointerEvent | MouseEvent,
+      cancelled: boolean,
+    ) => void;
+    rawUpdates?: boolean;
+    avoidPointerEvents?: boolean;
+  }
+
+  export default class PointerTracker {
+    constructor(element: Element, callbacks: PointerTrackerCallbacks);
+    readonly currentPointers: Pointer[];
+    readonly startPointers: Pointer[];
+    stop(): void;
+  }
+}

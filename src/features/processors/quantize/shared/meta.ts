@@ -19,5 +19,5 @@ export interface Options {
 export const defaultOptions: Options = {
   zx: 0,
   maxNumColors: 256,
-  dither: 1.0,
+  dither: 1,
 };
